@@ -42,6 +42,10 @@ fun WeeklySignalView(
 ) {
     val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
     val items by remember { derivedStateOf { viewModel.getAllSignalItems() } }
+    val isLoading by viewModel.isLoading.collectAsState()
+    
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     
     Scaffold(
         topBar = {
@@ -73,7 +77,14 @@ fun WeeklySignalView(
                 .padding(16.dp)
         ) {
             // Content
-            if (items.isEmpty()) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (items.isEmpty()) {
                 EmptyState()
             } else {
                 WeeklyGrid(
@@ -82,6 +93,20 @@ fun WeeklySignalView(
                 )
             }
         }
+    }
+    
+    // Error dialog
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("Error") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 

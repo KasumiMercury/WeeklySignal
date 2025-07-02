@@ -30,9 +30,13 @@ fun NavGraph(
         
         composable(Screen.SignalRegistration.route) {
             SignalRegistrationScreen(
-                onSignalSaved = { signalItem ->
-                    viewModel.addSignalItem(signalItem)
-                    navController.popBackStack()
+                onSignalSaved = { signalItem, onResult ->
+                    viewModel.addSignalItem(signalItem) { result ->
+                        onResult(result)
+                        if (result.isSuccess) {
+                            navController.popBackStack()
+                        }
+                    }
                 },
                 onBackPressed = {
                     navController.popBackStack()

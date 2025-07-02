@@ -65,8 +65,14 @@ fun SignalEditScreen(
                 vibration = vibration
             )
 
-            viewModel.updateSignalItem(updatedSignalItem)
-            onNavigateBack()
+            viewModel.updateSignalItem(updatedSignalItem) { result ->
+                result.onSuccess {
+                    onNavigateBack()
+                }.onFailure { exception ->
+                    errorMessage = exception.message ?: "Unknown error occurred"
+                    showErrorDialog = true
+                }
+            }
         } catch (e: Exception) {
             errorMessage = e.message ?: "Unknown error occurred"
             showErrorDialog = true
