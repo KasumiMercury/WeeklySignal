@@ -59,6 +59,7 @@ room {
 
 dependencies {
     add("kspCommonMainMetadata", libs.androidx.room.compiler)
+    add("kspDesktop", libs.androidx.room.compiler)
 }
 
 android {

@@ -2,47 +2,54 @@ package net.mercuryksm.data.database
 
 class DesktopDatabaseRepository : DatabaseRepository {
     
+    private val database: AppDatabase by lazy {
+        getDatabaseBuilder().build()
+    }
+    
+    private val signalDao: SignalDao by lazy { database.signalDao() }
+    private val timeSlotDao: TimeSlotDao by lazy { database.timeSlotDao() }
+    
     override suspend fun insertSignal(signalEntity: SignalEntity): Long {
-        TODO("Implement")
+        return signalDao.insert(signalEntity)
     }
     
     override suspend fun insertTimeSlot(timeSlotEntity: TimeSlotEntity): Long {
-        TODO("Implement")
+        return timeSlotDao.insert(timeSlotEntity)
     }
     
     override suspend fun updateSignal(signalEntity: SignalEntity) {
-        TODO("Implement")
+        signalDao.update(signalEntity)
     }
     
     override suspend fun updateTimeSlot(timeSlotEntity: TimeSlotEntity) {
-        TODO("Implement")
+        timeSlotDao.update(timeSlotEntity)
     }
     
     override suspend fun deleteSignal(signalId: String) {
-        TODO("Implement")
+        signalDao.delete(signalId)
     }
     
     override suspend fun deleteTimeSlot(timeSlotId: String) {
-        TODO("Implement")
+        timeSlotDao.delete(timeSlotId)
     }
     
     override suspend fun deleteTimeSlotsBySignalId(signalId: String) {
-        TODO("Implement")
+        timeSlotDao.deleteBySignalId(signalId)
     }
     
     override suspend fun getSignalById(signalId: String): SignalEntity? {
-        TODO("Implement")
+        return signalDao.getById(signalId)
     }
     
     override suspend fun getAllSignals(): List<SignalEntity> {
-        TODO("Implement")
+        return signalDao.getAll()
     }
     
     override suspend fun getTimeSlotsBySignalId(signalId: String): List<TimeSlotEntity> {
-        TODO("Implement")
+        return timeSlotDao.getBySignalId(signalId)
     }
     
     override suspend fun getAllTimeSlots(): List<TimeSlotEntity> {
-        TODO("Implement")
+        return timeSlotDao.getAll()
     }
 }
