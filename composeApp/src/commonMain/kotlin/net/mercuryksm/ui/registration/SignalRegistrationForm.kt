@@ -29,6 +29,12 @@ fun SignalRegistrationForm(
     vibration: Boolean,
     onVibrationChange: (Boolean) -> Unit
 ) {
+    val timePickerState = rememberTimePickerState(
+        initialHour = hour,
+        initialMinute = minute,
+        is24Hour = true
+    )
+    
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -40,11 +46,12 @@ fun SignalRegistrationForm(
             singleLine = true
         )
         
-        TimePicker(
-            hour = hour,
-            minute = minute,
-            onHourChange = onHourChange,
-            onMinuteChange = onMinuteChange
+        TimePickerCard(
+            timePickerState = timePickerState,
+            onTimeSelected = { hour, minute ->
+                onHourChange(hour)
+                onMinuteChange(minute)
+            }
         )
         
         DayOfWeekSelector(
@@ -70,14 +77,16 @@ fun SignalRegistrationForm(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimePicker(
-    hour: Int,
-    minute: Int,
-    onHourChange: (Int) -> Unit,
-    onMinuteChange: (Int) -> Unit
+private fun TimePickerCard(
+    timePickerState: TimePickerState,
+    onTimeSelected: (Int, Int) -> Unit
 ) {
+    var showDialog by remember { mutableStateOf(false) }
+    
     Card(
+        onClick = { showDialog = true },
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -89,78 +98,55 @@ private fun TimePicker(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Hour", style = MaterialTheme.typography.bodySmall)
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = { 
-                                onHourChange(if (hour > 0) hour - 1 else 23)
-                            }
-                        ) {
-                            Text("-")
-                        }
-                        
-                        Text(
-                            text = String.format("%02d", hour),
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.widthIn(min = 48.dp)
-                        )
-                        
-                        TextButton(
-                            onClick = { 
-                                onHourChange(if (hour < 23) hour + 1 else 0)
-                            }
-                        ) {
-                            Text("+")
-                        }
-                    }
-                }
-                
-                Text(":", style = MaterialTheme.typography.headlineMedium)
-                
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Minute", style = MaterialTheme.typography.bodySmall)
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = { 
-                                onMinuteChange(if (minute > 0) minute - 1 else 59)
-                            }
-                        ) {
-                            Text("-")
-                        }
-                        
-                        Text(
-                            text = String.format("%02d", minute),
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.widthIn(min = 48.dp)
-                        )
-                        
-                        TextButton(
-                            onClick = { 
-                                onMinuteChange(if (minute < 59) minute + 1 else 0)
-                            }
-                        ) {
-                            Text("+")
-                        }
-                    }
-                }
-            }
+            Text(
+                text = String.format("%02d:%02d", timePickerState.hour, timePickerState.minute),
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Text(
+                text = "Tap to change time",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
+    
+    if (showDialog) {
+        TimePickerDialog(
+            timePickerState = timePickerState,
+            onConfirm = { 
+                onTimeSelected(timePickerState.hour, timePickerState.minute)
+                showDialog = false 
+            },
+            onDismiss = { showDialog = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialog(
+    timePickerState: TimePickerState,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        text = {
+            TimePicker(state = timePickerState)
+        }
+    )
 }
 
 @Composable
