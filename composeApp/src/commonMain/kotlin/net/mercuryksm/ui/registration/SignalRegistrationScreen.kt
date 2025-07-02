@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,9 +22,7 @@ fun SignalRegistrationScreen(
     onBackPressed: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var hour by remember { mutableIntStateOf(9) }
-    var minute by remember { mutableIntStateOf(0) }
-    var selectedDay by remember { mutableStateOf(DayOfWeekJp.MONDAY) }
+    var timeSlots by remember { mutableStateOf<List<TimeSlot>>(emptyList()) }
     var description by remember { mutableStateOf("") }
     var sound by remember { mutableStateOf(true) }
     var vibration by remember { mutableStateOf(true) }
@@ -57,12 +56,8 @@ fun SignalRegistrationScreen(
             SignalRegistrationForm(
                 name = name,
                 onNameChange = { name = it },
-                hour = hour,
-                onHourChange = { hour = it },
-                minute = minute,
-                onMinuteChange = { minute = it },
-                selectedDay = selectedDay,
-                onDayChange = { selectedDay = it },
+                timeSlots = timeSlots,
+                onTimeSlotsChange = { timeSlots = it },
                 description = description,
                 onDescriptionChange = { description = it },
                 sound = sound,
@@ -81,12 +76,16 @@ fun SignalRegistrationScreen(
                         return@Button
                     }
                     
+                    if (timeSlots.isEmpty()) {
+                        errorMessage = "At least one time slot is required"
+                        showErrorDialog = true
+                        return@Button
+                    }
+                    
                     val newSignalItem = SignalItem(
                         id = UUID.randomUUID().toString(),
                         name = name.trim(),
-                        hour = hour,
-                        minute = minute,
-                        dayOfWeek = selectedDay,
+                        timeSlots = timeSlots,
                         description = description.trim(),
                         sound = sound,
                         vibration = vibration

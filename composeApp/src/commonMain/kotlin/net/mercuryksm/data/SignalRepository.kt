@@ -21,7 +21,20 @@ class SignalRepository {
     }
     
     fun getSignalItemsForDay(dayOfWeek: DayOfWeekJp): List<SignalItem> {
-        return _signalItems.filter { it.dayOfWeek == dayOfWeek }
+        return _signalItems.filter { signalItem ->
+            signalItem.timeSlots.any { it.dayOfWeek == dayOfWeek }
+        }
+    }
+    
+    fun getSignalItemById(id: String): SignalItem? {
+        return _signalItems.find { it.id == id }
+    }
+    
+    fun updateSignalItem(updatedItem: SignalItem) {
+        val index = _signalItems.indexOfFirst { it.id == updatedItem.id }
+        if (index != -1) {
+            _signalItems[index] = updatedItem
+        }
     }
     
     fun getAllSignalItems(): List<SignalItem> {
@@ -33,9 +46,11 @@ class SignalRepository {
             SignalItem(
                 id = UUID.randomUUID().toString(),
                 name = "Morning Meeting",
-                hour = 9,
-                minute = 0,
-                dayOfWeek = DayOfWeekJp.MONDAY,
+                timeSlots = listOf(
+                    TimeSlot(hour = 9, minute = 0, dayOfWeek = DayOfWeekJp.MONDAY),
+                    TimeSlot(hour = 9, minute = 0, dayOfWeek = DayOfWeekJp.WEDNESDAY),
+                    TimeSlot(hour = 9, minute = 0, dayOfWeek = DayOfWeekJp.FRIDAY)
+                ),
                 description = "Weekly team meeting",
                 sound = true,
                 vibration = true
@@ -43,9 +58,13 @@ class SignalRepository {
             SignalItem(
                 id = UUID.randomUUID().toString(),
                 name = "Lunch Break",
-                hour = 12,
-                minute = 30,
-                dayOfWeek = DayOfWeekJp.TUESDAY,
+                timeSlots = listOf(
+                    TimeSlot(hour = 12, minute = 30, dayOfWeek = DayOfWeekJp.MONDAY),
+                    TimeSlot(hour = 12, minute = 30, dayOfWeek = DayOfWeekJp.TUESDAY),
+                    TimeSlot(hour = 12, minute = 30, dayOfWeek = DayOfWeekJp.WEDNESDAY),
+                    TimeSlot(hour = 12, minute = 30, dayOfWeek = DayOfWeekJp.THURSDAY),
+                    TimeSlot(hour = 12, minute = 30, dayOfWeek = DayOfWeekJp.FRIDAY)
+                ),
                 description = "Time for lunch",
                 sound = false,
                 vibration = true
@@ -53,9 +72,9 @@ class SignalRepository {
             SignalItem(
                 id = UUID.randomUUID().toString(),
                 name = "Project Review",
-                hour = 15,
-                minute = 0,
-                dayOfWeek = DayOfWeekJp.WEDNESDAY,
+                timeSlots = listOf(
+                    TimeSlot(hour = 15, minute = 0, dayOfWeek = DayOfWeekJp.WEDNESDAY)
+                ),
                 description = "Review project progress",
                 sound = true,
                 vibration = false
@@ -63,9 +82,11 @@ class SignalRepository {
             SignalItem(
                 id = UUID.randomUUID().toString(),
                 name = "Exercise Time",
-                hour = 18,
-                minute = 30,
-                dayOfWeek = DayOfWeekJp.FRIDAY,
+                timeSlots = listOf(
+                    TimeSlot(hour = 18, minute = 30, dayOfWeek = DayOfWeekJp.TUESDAY),
+                    TimeSlot(hour = 18, minute = 30, dayOfWeek = DayOfWeekJp.THURSDAY),
+                    TimeSlot(hour = 19, minute = 0, dayOfWeek = DayOfWeekJp.SATURDAY)
+                ),
                 description = "Daily workout session",
                 sound = true,
                 vibration = true

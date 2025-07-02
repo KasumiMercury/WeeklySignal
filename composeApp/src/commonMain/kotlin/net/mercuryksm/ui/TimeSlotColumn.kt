@@ -16,15 +16,13 @@ import net.mercuryksm.data.SignalItem
 
 @Composable
 fun TimeSlotColumn(
-    timeSlot: TimeSlot,
+    timeSlot: UITimeSlot,
     allItems: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val width = if (timeSlot.hasItems) 120.dp else 20.dp
-    val itemsAtThisTime = allItems.filter { 
-        it.getTimeInMinutes() == timeSlot.getTimeInMinutes() 
-    }
+    val currentTimeInMinutes = timeSlot.getTimeInMinutes()
     
     Column(
         modifier = modifier.width(width),
@@ -40,7 +38,11 @@ fun TimeSlotColumn(
         
         // Seven day cells
         DayOfWeekJp.values().forEach { dayOfWeek ->
-            val item = itemsAtThisTime.find { it.dayOfWeek == dayOfWeek }
+            val item = allItems.find { signalItem ->
+                signalItem.timeSlots.any { timeSlot ->
+                    timeSlot.dayOfWeek == dayOfWeek && timeSlot.getTimeInMinutes() == currentTimeInMinutes
+                }
+            }
             
             DayCell(
                 dayOfWeek = dayOfWeek,
@@ -56,7 +58,7 @@ fun TimeSlotColumn(
 
 @Composable
 private fun TimeSlotHeader(
-    timeSlot: TimeSlot,
+    timeSlot: UITimeSlot,
     modifier: Modifier = Modifier
 ) {
     Box(

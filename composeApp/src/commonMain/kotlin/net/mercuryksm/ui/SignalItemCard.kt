@@ -48,7 +48,11 @@ fun SignalItemCard(
             )
             
             Text(
-                text = item.getTimeDisplayText(),
+                text = if (item.timeSlots.isNotEmpty()) {
+                    item.timeSlots.first().getTimeDisplayText()
+                } else {
+                    "--:--"
+                },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
