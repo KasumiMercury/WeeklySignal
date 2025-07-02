@@ -23,6 +23,15 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **DayOfWeekJp.kt**: Japanese day-of-week enum with display names and short English names (Mon, Tue, etc.)
 - **SignalRepository.kt**: Repository pattern for CRUD operations on SignalItems with reactive state management
 
+#### Database Layer (`data/database/`)
+- **Room KMP Implementation**: Cross-platform database using Room 2.7.2 with KSP annotation processing
+- **AppDatabase.kt**: Main Room database class with `@Database` annotation and expect/actual constructor pattern
+- **SignalDao.kt/TimeSlotDao.kt**: Room DAO interfaces with SQL query annotations for type-safe database operations
+- **SignalEntity.kt/TimeSlotEntity.kt**: Room entity models with `@Entity`, `@PrimaryKey`, and foreign key constraints
+- **DatabaseRepository.kt**: Common interface for database operations implemented by platform-specific repositories
+- **EntityMappers.kt**: Conversion utilities between domain models (SignalItem/TimeSlot) and database entities
+- **Platform-Specific Builders**: AndroidDatabaseBuilder (Context-based) and DesktopDatabaseBuilder (temp directory)
+
 ### UI Layer (`ui/`)
 - **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling, supports multiple time slots per SignalItem
 - **SignalItemCard.kt**: Individual signal item display component (120dp width, text truncation)
@@ -65,6 +74,18 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 ./gradlew assembleDebug       # May fail due to missing Android SDK
 ```
 
+### Room Database Development
+```bash
+# Clean and rebuild to regenerate Room code
+./gradlew clean && ./gradlew :composeApp:compileKotlinDesktop
+
+# Generate Room database schema (exports to composeApp/schemas/)
+./gradlew :composeApp:kspCommonMainKotlinMetadata
+
+# Check Room annotation processing for desktop
+./gradlew :composeApp:kspDesktopKotlin
+```
+
 ### Testing
 ```bash
 # RECOMMENDED: Desktop-specific tests (reliable in current environment)
@@ -90,9 +111,14 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 ## Configuration Files
 
-- **gradle/libs.versions.toml**: Centralized dependency version management
-- **composeApp/build.gradle.kts**: Main module configuration with Compose Multiplatform setup
+- **gradle/libs.versions.toml**: Centralized dependency version management including Room 2.7.2, KSP 2.1.21-2.0.1, and SQLite 2.5.2
+- **composeApp/build.gradle.kts**: Main module configuration with Compose Multiplatform setup, Room plugin, and KSP configuration
 - **build.gradle.kts**: Root project configuration with plugin declarations
+
+### Room Database Configuration
+- **Dependencies**: Room runtime, SQLite bundled, and Room compiler for annotation processing
+- **KSP Setup**: Configured for commonMainMetadata and desktop targets for cross-platform code generation
+- **Schema Export**: Enabled to `composeApp/schemas/` directory for version control and migration planning
 
 ## UI Implementation Details
 
@@ -155,6 +181,8 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Android SDK**: Not available in current development environment
 - **Recommended Workflow**: Use `./gradlew :composeApp:compileKotlinDesktop` for all verification and development
 - **Testing Strategy**: Focus on desktop platform for UI development and validation
+- **Room Database**: Works on both platforms but development/testing should use desktop compilation
+- **KSP Compatibility**: May show warnings about version compatibility but compilation succeeds
 
 ## Features Implemented
 
@@ -163,6 +191,8 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Interactive Time Slot Management**: Add, edit, and delete time slots through intuitive UI
 - **Weekly Grid Display**: Shows all SignalItems across their configured time slots
 - **Click-to-Edit**: Tap SignalItems in the weekly view to open edit screen
+- **Persistent Data Storage**: Room database implementation for both Android and Desktop platforms
+- **Cross-Platform Database**: Unified database operations with platform-specific file storage
 
 ### User Interface
 - **TimeSlot Display Format**: "Wed 12:00" format for easy readability
@@ -175,6 +205,8 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Immutable Updates**: Uses copy() pattern for state updates
 - **Repository Pattern**: Centralized data management with reactive state
 - **Sample Data**: Demonstrates various scheduling patterns (daily, specific days, different times)
+- **Room Entities**: Database entities with proper annotations, constraints, and foreign key relationships
+- **Type-Safe Database Operations**: Room DAO interfaces with compile-time SQL validation
 
 ### Sample Scheduling Patterns
 - **Morning Meeting**: Monday, Wednesday, Friday at 9:00 AM
