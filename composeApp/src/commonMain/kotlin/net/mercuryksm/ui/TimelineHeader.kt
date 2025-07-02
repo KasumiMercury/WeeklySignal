@@ -1,6 +1,7 @@
 package net.mercuryksm.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -31,11 +32,13 @@ data class TimeSlot(
 @Composable
 fun TimelineHeader(
     allItems: List<SignalItem>,
+    scrollState: LazyListState,
     modifier: Modifier = Modifier
 ) {
     val timeSlots = generateTimeSlots(allItems)
     
     LazyRow(
+        state = scrollState,
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {

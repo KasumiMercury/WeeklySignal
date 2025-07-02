@@ -2,6 +2,7 @@ package net.mercuryksm.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,7 @@ fun DayColumn(
     dayOfWeek: DayOfWeekJp,
     items: List<SignalItem>,
     allItems: List<SignalItem>,
+    scrollState: LazyListState,
     modifier: Modifier = Modifier,
     onItemClick: (SignalItem) -> Unit = {}
 ) {
@@ -42,6 +44,7 @@ fun DayColumn(
         DayTimeline(
             items = items,
             allItems = allItems,
+            scrollState = scrollState,
             onItemClick = onItemClick,
             modifier = Modifier.weight(1f)
         )
@@ -72,6 +75,7 @@ private fun DayLabel(
 private fun DayTimeline(
     items: List<SignalItem>,
     allItems: List<SignalItem>,
+    scrollState: LazyListState,
     onItemClick: (SignalItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -79,6 +83,7 @@ private fun DayTimeline(
     val itemsMap = items.associateBy { it.getTimeInMinutes() }
     
     LazyRow(
+        state = scrollState,
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically

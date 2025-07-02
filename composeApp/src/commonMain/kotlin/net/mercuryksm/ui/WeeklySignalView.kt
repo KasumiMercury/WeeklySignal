@@ -1,8 +1,11 @@
 package net.mercuryksm.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,8 +53,11 @@ private fun WeeklyGrid(
     items: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit
 ) {
+    val timeSlots = generateTimeSlots(items)
+    val scrollState = rememberLazyListState()
+    
     Column {
-        // ヘッダー部分（曜日ラベル + タイムラインヘッダー）
+        // 固定ヘッダー行（空白 + 時間ラベル）
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -59,37 +65,83 @@ private fun WeeklyGrid(
             // 曜日ラベル部分のスペース
             Spacer(modifier = Modifier.width(60.dp))
             
-            // タイムラインヘッダー
-            TimelineHeader(
-                allItems = items,
-                modifier = Modifier.weight(1f)
-            )
+            // 時間ヘッダー（スクロールしない）
+            Row {
+                timeSlots.forEach { timeSlot ->
+                    Box(
+                        modifier = Modifier
+                            .width(if (timeSlot.hasItems) 120.dp else 20.dp)
+                            .height(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (timeSlot.hasItems) {
+                            Text(
+                                text = timeSlot.getDisplayText(),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Text(
+                                text = "|",
+                                fontSize = 8.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
+            }
         }
         
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(vertical = 8.dp),
             color = MaterialTheme.colorScheme.outline
         )
         
-        // 各曜日の行
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // メインコンテンツエリア
+        Row(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(DayOfWeekJp.values().toList()) { dayOfWeek ->
-                val dayItems = items.filter { it.dayOfWeek == dayOfWeek }
-                
-                DayColumn(
-                    dayOfWeek = dayOfWeek,
-                    items = dayItems,
-                    allItems = items,
-                    onItemClick = onItemClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                if (dayOfWeek != DayOfWeekJp.SUNDAY) {
-                    Divider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        thickness = 0.5.dp
+            // 固定曜日ラベル列
+            Column(
+                modifier = Modifier.width(60.dp)
+            ) {
+                DayOfWeekJp.values().forEach { dayOfWeek ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(90.dp)
+                            .background(MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = dayOfWeek.getDisplayName(),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    if (dayOfWeek != DayOfWeekJp.SUNDAY) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            thickness = 0.5.dp
+                        )
+                    }
+                }
+            }
+            
+            // スクロール可能なタイムライン
+            LazyRow(
+                state = scrollState,
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(timeSlots) { timeSlot ->
+                    TimeSlotColumn(
+                        timeSlot = timeSlot,
+                        allItems = items,
+                        onItemClick = onItemClick
                     )
                 }
             }
@@ -120,6 +172,40 @@ private fun EmptyState() {
             )
         }
     }
+}
+
+private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
+    if (allItems.isEmpty()) {
+        return emptyList()
+    }
+    
+    val itemTimes = allItems.map { it.getTimeInMinutes() }.toSet()
+    val minTime = itemTimes.minOrNull() ?: 0
+    val maxTime = itemTimes.maxOrNull() ?: 1440
+    
+    val slots = mutableListOf<TimeSlot>()
+    var currentTime = minTime
+    
+    while (currentTime <= maxTime) {
+        val hour = currentTime / 60
+        val minute = currentTime % 60
+        val hasItems = itemTimes.contains(currentTime)
+        
+        slots.add(TimeSlot(hour, minute, hasItems))
+        
+        if (hasItems) {
+            currentTime += 30
+        } else {
+            val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
+            if (nextItemTime != null && nextItemTime - currentTime <= 15) {
+                currentTime = nextItemTime
+            } else {
+                currentTime += 15
+            }
+        }
+    }
+    
+    return slots
 }
 
 // テスト用サンプルデータ
