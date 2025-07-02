@@ -57,46 +57,6 @@ private fun WeeklyGrid(
     val scrollState = rememberLazyListState()
     
     Column {
-        // 固定ヘッダー行（空白 + 時間ラベル）
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 曜日ラベル部分のスペース
-            Spacer(modifier = Modifier.width(60.dp))
-            
-            // 時間ヘッダー（スクロールしない）
-            Row {
-                timeSlots.forEach { timeSlot ->
-                    Box(
-                        modifier = Modifier
-                            .width(if (timeSlot.hasItems) 120.dp else 20.dp)
-                            .height(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (timeSlot.hasItems) {
-                            Text(
-                                text = timeSlot.getDisplayText(),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        } else {
-                            Text(
-                                text = "|",
-                                fontSize = 8.sp,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outline
-        )
         
         // メインコンテンツエリア
         Row(
