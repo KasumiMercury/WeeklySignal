@@ -28,7 +28,9 @@ data class SignalItem(
     val hour: Int,
     val minute: Int,
     val dayOfWeek: DayOfWeekJp,
-    val description: String = ""
+    val description: String = "",
+    val sound: Boolean = true,
+    val vibration: Boolean = true
 ) {
     init {
         require(hour in 0..23) { "Hour must be between 0 and 23" }

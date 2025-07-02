@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,37 +15,58 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklySignalView(
     modifier: Modifier = Modifier,
-    items: List<SignalItem> = getSampleData(),
+    onAddSignalClick: () -> Unit = {},
     onItemClick: (SignalItem) -> Unit = {}
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Title
-        Text(
-            text = "Weekly Signal",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // Content
-        if (items.isEmpty()) {
-            EmptyState()
-        } else {
-            WeeklyGrid(
-                items = items,
-                onItemClick = onItemClick
+    val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
+    val items by remember { derivedStateOf { viewModel.getAllSignalItems() } }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Weekly Signal",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddSignalClick,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Signal"
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // Content
+            if (items.isEmpty()) {
+                EmptyState()
+            } else {
+                WeeklyGrid(
+                    items = items,
+                    onItemClick = onItemClick
+                )
+            }
         }
     }
 }
@@ -125,7 +148,7 @@ private fun EmptyState() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Add your first signal to get started",
+                text = "Tap the + button to add your first signal",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 8.dp)
@@ -168,31 +191,3 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
     return slots
 }
 
-// Sample data for testing
-private fun getSampleData(): List<SignalItem> {
-    return listOf(
-        SignalItem("1", "Morning Stretch", 7, 0, DayOfWeekJp.MONDAY, "Start your day with exercise"),
-        SignalItem("2", "Lunch Prep", 12, 0, DayOfWeekJp.MONDAY, "Time for lunch preparation"),
-        SignalItem("3", "Evening Walk", 17, 30, DayOfWeekJp.MONDAY, "Take a relaxing walk"),
-        
-        SignalItem("4", "Morning Coffee", 8, 0, DayOfWeekJp.TUESDAY, "Coffee break time"),
-        SignalItem("5", "Meeting Preparation", 14, 0, DayOfWeekJp.TUESDAY, "Important meeting ahead"),
-        SignalItem("6", "Reading Time", 20, 0, DayOfWeekJp.TUESDAY, "Time to read books"),
-        
-        SignalItem("7", "Yoga Session", 6, 30, DayOfWeekJp.WEDNESDAY, "Morning yoga practice"),
-        SignalItem("8", "Lunch Meeting", 12, 30, DayOfWeekJp.WEDNESDAY, "Team lunch meeting"),
-        
-        SignalItem("9", "Presentation Review", 9, 0, DayOfWeekJp.THURSDAY, "Final check before presentation"),
-        SignalItem("10", "Snack Time", 15, 0, DayOfWeekJp.THURSDAY, "Afternoon snack break"),
-        SignalItem("11", "Gym Session", 18, 0, DayOfWeekJp.THURSDAY, "Time for workout"),
-        
-        SignalItem("12", "Weekend Planning", 13, 0, DayOfWeekJp.FRIDAY, "Plan for the weekend"),
-        SignalItem("13", "Call Friends", 19, 0, DayOfWeekJp.FRIDAY, "Catch up with friends"),
-        
-        SignalItem("14", "House Cleaning", 10, 0, DayOfWeekJp.SATURDAY, "Clean the house"),
-        SignalItem("15", "Grocery Shopping", 14, 30, DayOfWeekJp.SATURDAY, "Buy groceries"),
-        
-        SignalItem("16", "Relaxed Breakfast", 9, 30, DayOfWeekJp.SUNDAY, "Enjoy a leisurely breakfast"),
-        SignalItem("17", "Family Time", 16, 0, DayOfWeekJp.SUNDAY, "Spend quality time with family")
-    )
-}

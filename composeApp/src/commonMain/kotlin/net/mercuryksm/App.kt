@@ -5,21 +5,22 @@ import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import net.mercuryksm.ui.WeeklySignalView
+import net.mercuryksm.navigation.NavGraph
+import net.mercuryksm.ui.WeeklySignalViewModel
 
 @Composable
 @Preview
 fun App() {
     MaterialTheme {
-        WeeklySignalView(
-            modifier = Modifier
-                .safeContentPadding()
-                .fillMaxSize(),
-            onItemClick = { item ->
-                // TODO: Implement navigation to detail page here
-                println("Signal item clicked: ${item.name}")
-            }
+        val navController = rememberNavController()
+        val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
+        
+        NavGraph(
+            navController = navController,
+            viewModel = viewModel
         )
     }
 }
