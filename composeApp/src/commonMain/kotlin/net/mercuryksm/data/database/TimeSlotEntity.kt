@@ -1,6 +1,22 @@
 package net.mercuryksm.data.database
 
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.PrimaryKey
+
+@Entity(
+    tableName = "time_slots",
+    foreignKeys = [
+        ForeignKey(
+            entity = SignalEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["signalId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
 data class TimeSlotEntity(
+    @PrimaryKey
     val id: String,
     val signalId: String,
     val hour: Int,
