@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import net.mercuryksm.ui.WeeklySignalView
 import net.mercuryksm.ui.registration.SignalRegistrationScreen
+import net.mercuryksm.ui.edit.SignalEditScreen
 
 @Composable
 fun NavGraph(
@@ -20,6 +21,9 @@ fun NavGraph(
             WeeklySignalView(
                 onAddSignalClick = {
                     navController.navigate(Screen.SignalRegistration.route)
+                },
+                onItemClick = { signalItem ->
+                    navController.navigate(Screen.SignalEdit.createRoute(signalItem.id))
                 }
             )
         }
@@ -31,6 +35,16 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onBackPressed = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Screen.SignalEdit.route) { backStackEntry ->
+            val signalId = backStackEntry.arguments?.getString("signalId") ?: ""
+            SignalEditScreen(
+                signalId = signalId,
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )

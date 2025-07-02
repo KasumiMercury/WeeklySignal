@@ -19,6 +19,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 
+data class UITimeSlot(
+    val hour: Int,
+    val minute: Int,
+    val hasItems: Boolean
+) {
+    fun getTimeInMinutes(): Int {
+        return hour * 60 + minute
+    }
+    
+    fun getDisplayText(): String {
+        return String.format("%02d:%02d", hour, minute)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklySignalView(
@@ -157,16 +171,19 @@ private fun EmptyState() {
     }
 }
 
-private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
+private fun generateTimeSlots(allItems: List<SignalItem>): List<UITimeSlot> {
     if (allItems.isEmpty()) {
         return emptyList()
     }
     
-    val itemTimes = allItems.map { it.getTimeInMinutes() }.toSet()
+    val itemTimes = allItems.flatMap { signalItem ->
+        signalItem.timeSlots.map { it.getTimeInMinutes() }
+    }.toSet()
+    
     val minTime = itemTimes.minOrNull() ?: 0
     val maxTime = itemTimes.maxOrNull() ?: 1440
     
-    val slots = mutableListOf<TimeSlot>()
+    val slots = mutableListOf<UITimeSlot>()
     var currentTime = minTime
     
     while (currentTime <= maxTime) {
@@ -174,7 +191,7 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
         val minute = currentTime % 60
         val hasItems = itemTimes.contains(currentTime)
         
-        slots.add(TimeSlot(hour, minute, hasItems))
+        slots.add(UITimeSlot(hour, minute, hasItems))
         
         if (hasItems) {
             currentTime += 30
