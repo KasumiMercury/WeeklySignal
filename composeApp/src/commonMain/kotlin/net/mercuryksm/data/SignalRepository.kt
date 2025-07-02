@@ -2,22 +2,96 @@ package net.mercuryksm.data
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import net.mercuryksm.data.database.SignalDatabaseService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.util.UUID
 
-class SignalRepository {
+class SignalRepository(
+    private val databaseService: SignalDatabaseService? = null,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+) {
     private val _signalItems = mutableStateListOf<SignalItem>()
     val signalItems: SnapshotStateList<SignalItem> = _signalItems
     
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
     init {
-        loadSampleData()
+        loadFromDatabase()
     }
     
-    fun addSignalItem(signalItem: SignalItem) {
-        _signalItems.add(signalItem)
+    suspend fun addSignalItem(signalItem: SignalItem): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            val result = if (databaseService != null) {
+                databaseService.saveSignalItem(signalItem)
+            } else {
+                Result.success(Unit)
+            }
+            
+            if (result.isSuccess) {
+                _signalItems.add(signalItem)
+            }
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
+        }
     }
     
-    fun removeSignalItem(signalItem: SignalItem) {
-        _signalItems.remove(signalItem)
+    suspend fun updateSignalItem(updatedItem: SignalItem): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            val result = if (databaseService != null) {
+                databaseService.updateSignalItem(updatedItem)
+            } else {
+                Result.success(Unit)
+            }
+            
+            if (result.isSuccess) {
+                val index = _signalItems.indexOfFirst { it.id == updatedItem.id }
+                if (index != -1) {
+                    _signalItems[index] = updatedItem
+                }
+            }
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    suspend fun removeSignalItem(signalItem: SignalItem): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            val result = if (databaseService != null) {
+                databaseService.deleteSignalItem(signalItem.id)
+            } else {
+                Result.success(Unit)
+            }
+            
+            if (result.isSuccess) {
+                _signalItems.remove(signalItem)
+            }
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
+        }
     }
     
     fun getSignalItemsForDay(dayOfWeek: DayOfWeekJp): List<SignalItem> {
@@ -30,15 +104,46 @@ class SignalRepository {
         return _signalItems.find { it.id == id }
     }
     
-    fun updateSignalItem(updatedItem: SignalItem) {
-        val index = _signalItems.indexOfFirst { it.id == updatedItem.id }
-        if (index != -1) {
-            _signalItems[index] = updatedItem
+    fun getAllSignalItems(): List<SignalItem> {
+        return _signalItems.toList()
+    }
+    
+    suspend fun refreshFromDatabase(): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            if (databaseService != null) {
+                val result = databaseService.getAllSignalItems()
+                result.onSuccess { items ->
+                    _signalItems.clear()
+                    _signalItems.addAll(items)
+                }
+                Result.success(Unit)
+            } else {
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
         }
     }
     
-    fun getAllSignalItems(): List<SignalItem> {
-        return _signalItems.toList()
+    private fun loadFromDatabase() {
+        if (databaseService != null) {
+            coroutineScope.launch {
+                databaseService.getAllSignalItems()
+                    .onSuccess { items ->
+                        _signalItems.clear()
+                        _signalItems.addAll(items)
+                    }
+                    .onFailure {
+                        loadSampleData()
+                    }
+            }
+        } else {
+            loadSampleData()
+        }
     }
     
     private fun loadSampleData() {

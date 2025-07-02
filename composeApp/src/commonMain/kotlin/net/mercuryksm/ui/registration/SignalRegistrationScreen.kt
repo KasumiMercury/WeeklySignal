@@ -18,7 +18,7 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignalRegistrationScreen(
-    onSignalSaved: (SignalItem) -> Unit,
+    onSignalSaved: (SignalItem, (Result<Unit>) -> Unit) -> Unit,
     onBackPressed: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -29,6 +29,8 @@ fun SignalRegistrationScreen(
     
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -91,13 +93,30 @@ fun SignalRegistrationScreen(
                         vibration = vibration
                     )
                     
-                    onSignalSaved(newSignalItem)
+                    isLoading = true
+                    onSignalSaved(newSignalItem) { result ->
+                        isLoading = false
+                        result.onSuccess {
+                            showSuccessDialog = true
+                        }.onFailure { exception ->
+                            errorMessage = "Failed to save: ${exception.message}"
+                            showErrorDialog = true
+                        }
+                    }
                 },
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                Text("Add Signal")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Add Signal")
+                }
             }
         }
     }
@@ -109,6 +128,25 @@ fun SignalRegistrationScreen(
             text = { Text(errorMessage) },
             confirmButton = {
                 TextButton(onClick = { showErrorDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+    
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showSuccessDialog = false
+                onBackPressed()
+            },
+            title = { Text("Success") },
+            text = { Text("Signal has been saved successfully!") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showSuccessDialog = false
+                    onBackPressed()
+                }) {
                     Text("OK")
                 }
             }
