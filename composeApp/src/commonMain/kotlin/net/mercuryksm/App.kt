@@ -17,7 +17,7 @@ fun App() {
                 .safeContentPadding()
                 .fillMaxSize(),
             onItemClick = { item ->
-                // TODO: 詳細ページへの遷移処理をここに実装
+                // TODO: Implement navigation to detail page here
                 println("Signal item clicked: ${item.name}")
             }
         )

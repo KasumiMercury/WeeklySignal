@@ -111,6 +111,8 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - Material 3 design system implementation
 - Resource management through Compose Resources
 - Lifecycle-aware ViewModels for state management
+- **Code Standards**: All comments and test data should be written in English
+- **Sample Data**: Test data uses English names and descriptions for better international readability
 
 ## Testing and Validation
 

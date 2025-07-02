@@ -32,7 +32,7 @@ fun DayColumn(
             .height(90.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 曜日ラベル（固定部分）
+        // Day label (fixed section)
         DayLabel(
             dayOfWeek = dayOfWeek,
             modifier = Modifier
@@ -40,7 +40,7 @@ fun DayColumn(
                 .fillMaxHeight()
         )
         
-        // SignalItemsのタイムライン（スクロール部分）
+        // SignalItems timeline (scrollable section)
         DayTimeline(
             items = items,
             allItems = allItems,

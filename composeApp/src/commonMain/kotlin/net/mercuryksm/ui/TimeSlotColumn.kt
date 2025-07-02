@@ -30,7 +30,7 @@ fun TimeSlotColumn(
         modifier = modifier.width(width),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 時間ヘッダー
+        // Time header
         TimeSlotHeader(
             timeSlot = timeSlot,
             modifier = Modifier
@@ -38,7 +38,7 @@ fun TimeSlotColumn(
                 .height(40.dp)
         )
         
-        // 7つの曜日セル
+        // Seven day cells
         DayOfWeekJp.values().forEach { dayOfWeek ->
             val item = itemsAtThisTime.find { it.dayOfWeek == dayOfWeek }
             

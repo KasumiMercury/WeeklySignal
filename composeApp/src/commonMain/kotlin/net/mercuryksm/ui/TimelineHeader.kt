@@ -93,7 +93,7 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
     val slots = mutableListOf<TimeSlot>()
     var currentTime = minTime
     
-    // 開始時間より前の時間は表示しない
+    // Do not display times before the start time
     while (currentTime <= maxTime) {
         val hour = currentTime / 60
         val minute = currentTime % 60
@@ -102,10 +102,10 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
         slots.add(TimeSlot(hour, minute, hasItems))
         
         if (hasItems) {
-            // SignalItemがある時間は次の時間スロットまで30分間隔
+            // 30-minute intervals for times with SignalItems
             currentTime += 30
         } else {
-            // SignalItemがない時間は15分間隔でコンパクトに
+            // 15-minute intervals for compact display when no SignalItems
             val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
             if (nextItemTime != null && nextItemTime - currentTime <= 15) {
                 currentTime = nextItemTime

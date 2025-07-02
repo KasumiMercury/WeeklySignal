@@ -27,7 +27,7 @@ fun WeeklySignalView(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // タイトル
+        // Title
         Text(
             text = "Weekly Signal",
             fontSize = 24.sp,
@@ -36,7 +36,7 @@ fun WeeklySignalView(
             modifier = Modifier.padding(bottom = 16.dp)
         )
         
-        // コンテンツ
+        // Content
         if (items.isEmpty()) {
             EmptyState()
         } else {
@@ -58,11 +58,11 @@ private fun WeeklyGrid(
     
     Column {
         
-        // メインコンテンツエリア
+        // Main content area
         Row(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // 固定曜日ラベル列
+            // Fixed day label column
             Column(
                 modifier = Modifier.width(60.dp)
             ) {
@@ -91,7 +91,7 @@ private fun WeeklyGrid(
                 }
             }
             
-            // スクロール可能なタイムライン
+            // Scrollable timeline
             LazyRow(
                 state = scrollState,
                 horizontalArrangement = Arrangement.spacedBy(0.dp),
@@ -168,31 +168,31 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<TimeSlot> {
     return slots
 }
 
-// テスト用サンプルデータ
+// Sample data for testing
 private fun getSampleData(): List<SignalItem> {
     return listOf(
-        SignalItem("1", "朝のストレッチ", 7, 0, DayOfWeekJp.MONDAY, "朝の運動を始めましょう"),
-        SignalItem("2", "昼食の準備", 12, 0, DayOfWeekJp.MONDAY, "お昼ご飯の時間です"),
-        SignalItem("3", "夕方の散歩", 17, 30, DayOfWeekJp.MONDAY, "散歩に出かけましょう"),
+        SignalItem("1", "Morning Stretch", 7, 0, DayOfWeekJp.MONDAY, "Start your day with exercise"),
+        SignalItem("2", "Lunch Prep", 12, 0, DayOfWeekJp.MONDAY, "Time for lunch preparation"),
+        SignalItem("3", "Evening Walk", 17, 30, DayOfWeekJp.MONDAY, "Take a relaxing walk"),
         
-        SignalItem("4", "モーニングコーヒー", 8, 0, DayOfWeekJp.TUESDAY, "コーヒーブレイクの時間"),
-        SignalItem("5", "会議の準備をする時間です", 14, 0, DayOfWeekJp.TUESDAY, "重要な会議があります"),
-        SignalItem("6", "読書タイム", 20, 0, DayOfWeekJp.TUESDAY, "本を読む時間"),
+        SignalItem("4", "Morning Coffee", 8, 0, DayOfWeekJp.TUESDAY, "Coffee break time"),
+        SignalItem("5", "Meeting Preparation", 14, 0, DayOfWeekJp.TUESDAY, "Important meeting ahead"),
+        SignalItem("6", "Reading Time", 20, 0, DayOfWeekJp.TUESDAY, "Time to read books"),
         
-        SignalItem("7", "ヨガの時間", 6, 30, DayOfWeekJp.WEDNESDAY, "朝のヨガセッション"),
-        SignalItem("8", "ランチミーティング", 12, 30, DayOfWeekJp.WEDNESDAY, "チームとのランチ"),
+        SignalItem("7", "Yoga Session", 6, 30, DayOfWeekJp.WEDNESDAY, "Morning yoga practice"),
+        SignalItem("8", "Lunch Meeting", 12, 30, DayOfWeekJp.WEDNESDAY, "Team lunch meeting"),
         
-        SignalItem("9", "プレゼンテーションの最終確認", 9, 0, DayOfWeekJp.THURSDAY, "発表前の最終チェック"),
-        SignalItem("10", "おやつタイム", 15, 0, DayOfWeekJp.THURSDAY, "小腹が空いた時間"),
-        SignalItem("11", "ジムに行く時間", 18, 0, DayOfWeekJp.THURSDAY, "運動する時間"),
+        SignalItem("9", "Presentation Review", 9, 0, DayOfWeekJp.THURSDAY, "Final check before presentation"),
+        SignalItem("10", "Snack Time", 15, 0, DayOfWeekJp.THURSDAY, "Afternoon snack break"),
+        SignalItem("11", "Gym Session", 18, 0, DayOfWeekJp.THURSDAY, "Time for workout"),
         
-        SignalItem("12", "週末の計画を立てる", 13, 0, DayOfWeekJp.FRIDAY, "楽しい週末の準備"),
-        SignalItem("13", "友達との電話", 19, 0, DayOfWeekJp.FRIDAY, "久しぶりの友達との通話"),
+        SignalItem("12", "Weekend Planning", 13, 0, DayOfWeekJp.FRIDAY, "Plan for the weekend"),
+        SignalItem("13", "Call Friends", 19, 0, DayOfWeekJp.FRIDAY, "Catch up with friends"),
         
-        SignalItem("14", "掃除の時間", 10, 0, DayOfWeekJp.SATURDAY, "部屋の掃除をしましょう"),
-        SignalItem("15", "買い物", 14, 30, DayOfWeekJp.SATURDAY, "食材の買い出し"),
+        SignalItem("14", "House Cleaning", 10, 0, DayOfWeekJp.SATURDAY, "Clean the house"),
+        SignalItem("15", "Grocery Shopping", 14, 30, DayOfWeekJp.SATURDAY, "Buy groceries"),
         
-        SignalItem("16", "のんびりとした朝食", 9, 30, DayOfWeekJp.SUNDAY, "ゆっくり朝食を楽しむ"),
-        SignalItem("17", "家族との時間", 16, 0, DayOfWeekJp.SUNDAY, "家族と過ごす大切な時間")
+        SignalItem("16", "Relaxed Breakfast", 9, 30, DayOfWeekJp.SUNDAY, "Enjoy a leisurely breakfast"),
+        SignalItem("17", "Family Time", 16, 0, DayOfWeekJp.SUNDAY, "Spend quality time with family")
     )
 }
