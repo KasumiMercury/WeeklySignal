@@ -1,8 +1,6 @@
 package net.mercuryksm.ui.edit
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -58,11 +56,11 @@ fun TimeSlotEditor(
                 }
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(timeSlots) { timeSlot ->
+                timeSlots.forEach { timeSlot ->
                     TimeSlotRow(
                         timeSlot = timeSlot,
                         onEdit = {
@@ -155,11 +153,6 @@ private fun TimeSlotRow(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = timeSlot.dayOfWeek.getDisplayName(),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
 
