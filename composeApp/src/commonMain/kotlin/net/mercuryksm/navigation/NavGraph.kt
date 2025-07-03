@@ -19,6 +19,7 @@ fun NavGraph(
     ) {
         composable(Screen.WeeklySignal.route) {
             WeeklySignalView(
+                viewModel = viewModel,
                 onAddSignalClick = {
                     navController.navigate(Screen.SignalRegistration.route)
                 },
@@ -47,6 +48,7 @@ fun NavGraph(
         composable(Screen.SignalEdit.route) { backStackEntry ->
             val signalId = backStackEntry.arguments?.getString("signalId") ?: ""
             SignalEditScreen(
+                viewModel = viewModel,
                 signalId = signalId,
                 onNavigateBack = {
                     navController.popBackStack()

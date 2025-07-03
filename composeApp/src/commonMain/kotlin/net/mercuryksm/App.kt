@@ -10,13 +10,16 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import net.mercuryksm.navigation.NavGraph
 import net.mercuryksm.ui.WeeklySignalViewModel
+import net.mercuryksm.data.SignalRepository
+import net.mercuryksm.data.database.SignalDatabaseService
 
 @Composable
 @Preview
-fun App() {
+fun App(databaseService: SignalDatabaseService? = null) {
     MaterialTheme {
         val navController = rememberNavController()
-        val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
+        val repository = remember(databaseService) { SignalRepository(databaseService) }
+        val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel(repository) }
         
         NavGraph(
             navController = navController,

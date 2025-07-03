@@ -9,7 +9,7 @@ import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.SignalRepository
 
 class WeeklySignalViewModel(
-    private val signalRepository: SignalRepository = SignalRepository()
+    private val signalRepository: SignalRepository
 ) : ViewModel() {
     
     val signalItems = signalRepository.signalItems
