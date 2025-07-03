@@ -18,11 +18,11 @@ import net.mercuryksm.ui.WeeklySignalViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignalEditScreen(
+    viewModel: WeeklySignalViewModel,
     signalId: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
     val originalSignalItem = viewModel.getSignalItemById(signalId)
 
     if (originalSignalItem == null) {

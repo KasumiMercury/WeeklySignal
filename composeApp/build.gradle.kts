@@ -49,6 +49,7 @@ kotlin {
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.androidx.sqlite.bundled) // Add for desktop
         }
     }
 }
@@ -60,6 +61,7 @@ room {
 dependencies {
     add("kspCommonMainMetadata", libs.androidx.room.compiler)
     add("kspDesktop", libs.androidx.room.compiler)
+    add("kspAndroid", libs.androidx.room.compiler) // Add for Android
 }
 
 android {

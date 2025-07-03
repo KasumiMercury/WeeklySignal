@@ -36,11 +36,11 @@ data class UITimeSlot(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklySignalView(
+    viewModel: WeeklySignalViewModel,
     modifier: Modifier = Modifier,
     onAddSignalClick: () -> Unit = {},
     onItemClick: (SignalItem) -> Unit = {}
 ) {
-    val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel() }
     val items by remember { derivedStateOf { viewModel.getAllSignalItems() } }
     val isLoading by viewModel.isLoading.collectAsState()
     
