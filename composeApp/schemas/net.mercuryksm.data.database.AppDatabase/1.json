@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "87dbb3f18b7370d2c9c99d335ee3091e",
+    "identityHash": "f538317e9d420860665a5ac8f7f8b979",
     "entities": [
       {
         "tableName": "signals",
@@ -87,6 +87,17 @@
             "id"
           ]
         },
+        "indices": [
+          {
+            "name": "index_time_slots_signalId",
+            "unique": false,
+            "columnNames": [
+              "signalId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_slots_signalId` ON `${TABLE_NAME}` (`signalId`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "signals",
@@ -104,7 +115,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '87dbb3f18b7370d2c9c99d335ee3091e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f538317e9d420860665a5ac8f7f8b979')"
     ]
   }
 }
