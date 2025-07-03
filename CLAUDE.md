@@ -30,7 +30,11 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **SignalEntity.kt/TimeSlotEntity.kt**: Room entity models with `@Entity`, `@PrimaryKey`, and foreign key constraints
 - **DatabaseRepository.kt**: Common interface for database operations implemented by platform-specific repositories
 - **EntityMappers.kt**: Conversion utilities between domain models (SignalItem/TimeSlot) and database entities
+- **Platform-Specific Services**: DesktopSignalDatabaseService, AndroidSignalDatabaseService for platform-specific database operations
+- **DatabaseServiceFactory.kt**: Expect/actual factory pattern for creating platform-specific database services
 - **Platform-Specific Builders**: AndroidDatabaseBuilder (Context-based) and DesktopDatabaseBuilder (temp directory)
+
+**⚠️ Current Status**: Database service not initialized in application - all operations fall back to in-memory sample data. See "Current Implementation Issues" section for details.
 
 ### UI Layer (`ui/`)
 - **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling, supports multiple time slots per SignalItem
@@ -84,6 +88,20 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 # Check Room annotation processing for desktop
 ./gradlew :composeApp:kspDesktopKotlin
+
+# Verify database operations (after fixing database service initialization)
+./gradlew run  # Desktop app with database persistence
+```
+
+### Database Service Verification
+```bash
+# Test database service integration after fixes
+./gradlew :composeApp:compileKotlinDesktop  # Verify compilation
+./gradlew run  # Run desktop app and test SignalItem persistence
+
+# Check for database file creation
+# Desktop: Check ${TEMP_DIR}/weekly_signal.db exists after creating SignalItems
+# Android: Use Android Studio Database Inspector or adb shell
 ```
 
 ### Testing
@@ -191,8 +209,9 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Interactive Time Slot Management**: Add, edit, and delete time slots through intuitive UI
 - **Weekly Grid Display**: Shows all SignalItems across their configured time slots
 - **Click-to-Edit**: Tap SignalItems in the weekly view to open edit screen
-- **Persistent Data Storage**: Room database implementation for both Android and Desktop platforms
-- **Cross-Platform Database**: Unified database operations with platform-specific file storage
+- **Database Architecture Ready**: Complete Room database implementation for both Android and Desktop platforms
+- **Cross-Platform Database Service**: Unified database operations with platform-specific file storage
+- **⚠️ Database Integration**: Currently operates on sample data - database service requires initialization (see "Current Implementation Issues")
 
 ### User Interface
 - **TimeSlot Display Format**: "Wed 12:00" format for easy readability
@@ -214,6 +233,63 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Project Review**: Wednesday at 3:00 PM only
 - **Exercise Time**: Tuesday/Thursday at 6:30 PM, Saturday at 7:00 PM
 
+## Database Operations Documentation
+
+For comprehensive database operations documentation, see `docs/db.md` which covers:
+
+### Screen-Specific Database Operations
+- **WeeklySignalView**: Read operations (display all SignalItems, filter by day)
+  - `WeeklySignalView.kt:43-44` → `viewModel.getAllSignalItems()` → Repository → Database
+- **SignalRegistrationScreen**: Create operations (save new SignalItems)
+  - `SignalRegistrationScreen.kt:97` → `onSignalSaved()` → ViewModel → Repository → Database INSERT
+- **SignalEditScreen**: Update/Delete operations (modify existing SignalItems)
+  - `SignalEditScreen.kt:26` → `viewModel.getSignalItemById()` → Repository → Database SELECT
+  - Update flow: ViewModel → Repository → Database UPDATE
+
+### Complete Database Operation Chain
+```
+UI Screen Action → Navigation/Callback → ViewModel Method → Repository Method → 
+Database Service → Platform-Specific Service → Database Repository → Room DAO → SQLite
+```
+
+### Platform Storage Locations
+- **Desktop**: `${TEMP_DIR}/weekly_signal.db` (e.g., `/tmp/weekly_signal.db`)
+- **Android**: `/data/data/net.mercuryksm/databases/weekly_signal.db`
+
+## Current Implementation Issues
+
+### Database Service Integration Status
+
+**⚠️ Critical Issue**: Database service is not properly initialized in the application, causing all database operations to fall back to in-memory sample data only.
+
+#### Problem Details
+1. **WeeklySignalViewModel.kt:12**: Uses default `SignalRepository()` constructor without database service
+2. **SignalRepository.kt:15**: `databaseService: SignalDatabaseService? = null` defaults to null
+3. **App.kt**: Does not initialize database service for ViewModel
+4. **Result**: All CRUD operations work in memory only, data is lost on app restart
+
+#### Expected Fix
+To enable proper database persistence, the application needs to initialize the database service:
+
+```kotlin
+// In App.kt or main entry points
+val databaseService = DatabaseServiceFactory().createSignalDatabaseService()
+val repository = SignalRepository(databaseService)
+val viewModel = WeeklySignalViewModel(repository)
+```
+
+#### Fix Implementation Status
+- ✅ Database service architecture exists and is fully implemented
+- ✅ Platform-specific factories (Desktop/Android) are implemented
+- ❌ Application entry points do not initialize database service
+- ❌ ViewModels are created without database service parameter
+
+### Workaround for Testing
+For development and testing, the application loads sample data that demonstrates all features:
+- 4 sample SignalItems with various scheduling patterns
+- Multiple time slots per item (Morning Meeting: Mon/Wed/Fri, Lunch: Daily, etc.)
+- All UI functionality works correctly with sample data
+
 ## Implementation Insights
 
 ### Key Technical Decisions
@@ -221,3 +297,5 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 2. **UITimeSlot vs TimeSlot**: Separate data classes to avoid naming conflicts between UI and data models
 3. **Removal of Legacy Components**: Cleaned up outdated DayColumn and TimelineHeader files
 4. **Material 3 Integration**: Full adoption of Material 3 components and theming
+5. **Database Service Separation**: Platform-agnostic database operations with expect/actual pattern
+6. **Repository Pattern**: Centralized data management with fallback to sample data when database unavailable
