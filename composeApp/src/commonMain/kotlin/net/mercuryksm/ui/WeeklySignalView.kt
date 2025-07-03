@@ -128,6 +128,9 @@ private fun WeeklyGrid(
             Column(
                 modifier = Modifier.width(60.dp)
             ) {
+                // Spacer to align with time header in TimeSlotColumn
+                Spacer(modifier = Modifier.height(40.dp))
+                
                 DayOfWeekJp.values().forEach { dayOfWeek ->
                     Box(
                         modifier = Modifier
