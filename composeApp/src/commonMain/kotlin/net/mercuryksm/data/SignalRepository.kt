@@ -158,7 +158,8 @@ class SignalRepository(
                 ),
                 description = "Weekly team meeting",
                 sound = true,
-                vibration = true
+                vibration = true,
+                color = 0xFF2196F3L // Blue
             ),
             SignalItem(
                 id = UUID.randomUUID().toString(),
@@ -172,7 +173,8 @@ class SignalRepository(
                 ),
                 description = "Time for lunch",
                 sound = false,
-                vibration = true
+                vibration = true,
+                color = 0xFF4CAF50L // Green
             ),
             SignalItem(
                 id = UUID.randomUUID().toString(),
@@ -182,7 +184,8 @@ class SignalRepository(
                 ),
                 description = "Review project progress",
                 sound = true,
-                vibration = false
+                vibration = false,
+                color = 0xFFFF9800L // Orange
             ),
             SignalItem(
                 id = UUID.randomUUID().toString(),
@@ -194,7 +197,8 @@ class SignalRepository(
                 ),
                 description = "Daily workout session",
                 sound = true,
-                vibration = true
+                vibration = true,
+                color = 0xFFE91E63L // Pink
             )
         )
         
