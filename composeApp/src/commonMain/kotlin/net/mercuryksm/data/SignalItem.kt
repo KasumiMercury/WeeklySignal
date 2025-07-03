@@ -66,7 +66,8 @@ data class SignalItem(
     val timeSlots: List<TimeSlot>,
     val description: String = "",
     val sound: Boolean = true,
-    val vibration: Boolean = true
+    val vibration: Boolean = true,
+    val color: Long = 0xFF6750A4L // Default to Material 3 primary color
 ) {
     init {
         require(timeSlots.isNotEmpty()) { "SignalItem must have at least one time slot" }

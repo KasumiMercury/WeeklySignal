@@ -10,5 +10,6 @@ data class SignalEntity(
     val name: String,
     val description: String,
     val sound: Boolean,
-    val vibration: Boolean
+    val vibration: Boolean,
+    val color: Long = 0xFF6750A4L // Default to Material 3 primary color
 )
