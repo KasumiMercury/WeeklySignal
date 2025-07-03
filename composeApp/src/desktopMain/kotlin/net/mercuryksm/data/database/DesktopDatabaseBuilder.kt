@@ -9,5 +9,5 @@ fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
     val dbFile = File(System.getProperty("java.io.tmpdir"), "weekly_signal.db")
     return Room.databaseBuilder<AppDatabase>(
         name = dbFile.absolutePath
-    ).setDriver(BundledSQLiteDriver())
+    ).setDriver(BundledSQLiteDriver()).addMigrations(MIGRATION_1_2)
 }
