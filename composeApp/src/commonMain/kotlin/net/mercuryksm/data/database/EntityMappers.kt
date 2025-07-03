@@ -12,7 +12,8 @@ object EntityMappers {
             name = this.name,
             description = this.description,
             sound = this.sound,
-            vibration = this.vibration
+            vibration = this.vibration,
+            color = this.color
         )
     }
     
@@ -33,7 +34,8 @@ object EntityMappers {
             timeSlots = timeSlots,
             description = this.description,
             sound = this.sound,
-            vibration = this.vibration
+            vibration = this.vibration,
+            color = this.color
         )
     }
     
