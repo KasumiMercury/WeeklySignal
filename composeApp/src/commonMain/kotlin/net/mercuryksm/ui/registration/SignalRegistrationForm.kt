@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.edit.TimeSlotEditor
+import net.mercuryksm.ui.ColorPicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,7 +26,9 @@ fun SignalRegistrationForm(
     sound: Boolean,
     onSoundChange: (Boolean) -> Unit,
     vibration: Boolean,
-    onVibrationChange: (Boolean) -> Unit
+    onVibrationChange: (Boolean) -> Unit,
+    color: Long,
+    onColorChange: (Long) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -36,6 +39,11 @@ fun SignalRegistrationForm(
             label = { Text("Signal Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        )
+        
+        ColorPicker(
+            selectedColor = color,
+            onColorSelected = onColorChange
         )
         
         TimeSlotEditor(

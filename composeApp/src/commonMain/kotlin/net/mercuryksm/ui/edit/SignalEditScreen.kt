@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.WeeklySignalViewModel
+import net.mercuryksm.ui.ColorPicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,7 @@ fun SignalEditScreen(
     var sound by remember { mutableStateOf(originalSignalItem.sound) }
     var vibration by remember { mutableStateOf(originalSignalItem.vibration) }
     var timeSlots by remember { mutableStateOf(originalSignalItem.timeSlots) }
+    var color by remember { mutableStateOf(originalSignalItem.color) }
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
@@ -62,7 +64,8 @@ fun SignalEditScreen(
                 timeSlots = timeSlots,
                 description = description.trim(),
                 sound = sound,
-                vibration = vibration
+                vibration = vibration,
+                color = color
             )
 
             viewModel.updateSignalItem(updatedSignalItem) { result ->
@@ -124,7 +127,9 @@ fun SignalEditScreen(
                 vibration = vibration,
                 onVibrationChange = { vibration = it },
                 timeSlots = timeSlots,
-                onTimeSlotsChange = { timeSlots = it }
+                onTimeSlotsChange = { timeSlots = it },
+                color = color,
+                onColorChange = { color = it }
             )
         }
     }
@@ -157,6 +162,8 @@ private fun SignalEditForm(
     onVibrationChange: (Boolean) -> Unit,
     timeSlots: List<TimeSlot>,
     onTimeSlotsChange: (List<TimeSlot>) -> Unit,
+    color: Long,
+    onColorChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -170,6 +177,12 @@ private fun SignalEditForm(
             label = { Text("Signal Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        )
+
+        // Color Picker
+        ColorPicker(
+            selectedColor = color,
+            onColorSelected = onColorChange
         )
 
         // Time Slots Editor
