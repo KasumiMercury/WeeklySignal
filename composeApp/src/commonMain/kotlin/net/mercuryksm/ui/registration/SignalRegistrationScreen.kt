@@ -26,6 +26,7 @@ fun SignalRegistrationScreen(
     var description by remember { mutableStateOf("") }
     var sound by remember { mutableStateOf(true) }
     var vibration by remember { mutableStateOf(true) }
+    var color by remember { mutableStateOf(0xFF6750A4L) }
     
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
@@ -65,7 +66,9 @@ fun SignalRegistrationScreen(
                 sound = sound,
                 onSoundChange = { sound = it },
                 vibration = vibration,
-                onVibrationChange = { vibration = it }
+                onVibrationChange = { vibration = it },
+                color = color,
+                onColorChange = { color = it }
             )
             
             Spacer(modifier = Modifier.weight(1f))
@@ -90,7 +93,8 @@ fun SignalRegistrationScreen(
                         timeSlots = timeSlots,
                         description = description.trim(),
                         sound = sound,
-                        vibration = vibration
+                        vibration = vibration,
+                        color = color
                     )
                     
                     isLoading = true
