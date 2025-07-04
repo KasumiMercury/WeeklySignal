@@ -1,5 +1,6 @@
 package net.mercuryksm.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -11,5 +12,6 @@ data class SignalEntity(
     val description: String,
     val sound: Boolean,
     val vibration: Boolean,
-    val color: Long = 0xFF6750A4L // Default to Material 3 primary color
+    @ColumnInfo(defaultValue = "4288423076") // 0xFF6750A4L as string
+    val color: Long = 0xFF6750A4L
 )

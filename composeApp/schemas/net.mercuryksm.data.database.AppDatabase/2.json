@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "0ebd51d26b6a2643a39ff0050fa69eaa",
+    "identityHash": "a3e59ca615b93a2de1400b270994eaa3",
     "entities": [
       {
         "tableName": "signals",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `sound` INTEGER NOT NULL, `vibration` INTEGER NOT NULL, `color` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `sound` INTEGER NOT NULL, `vibration` INTEGER NOT NULL, `color` INTEGER NOT NULL DEFAULT 4288423076, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -42,7 +42,8 @@
             "fieldPath": "color",
             "columnName": "color",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "4288423076"
           }
         ],
         "primaryKey": {
@@ -121,7 +122,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0ebd51d26b6a2643a39ff0050fa69eaa')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a3e59ca615b93a2de1400b270994eaa3')"
     ]
   }
 }
