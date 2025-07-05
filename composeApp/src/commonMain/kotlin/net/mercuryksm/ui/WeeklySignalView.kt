@@ -70,27 +70,29 @@ fun WeeklySignalView(
             }
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Content
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+            item {
+                // Content
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (items.isEmpty()) {
+                    EmptyState()
+                } else {
+                    WeeklyGrid(
+                        items = items,
+                        onItemClick = onItemClick
+                    )
                 }
-            } else if (items.isEmpty()) {
-                EmptyState()
-            } else {
-                WeeklyGrid(
-                    items = items,
-                    onItemClick = onItemClick
-                )
             }
         }
     }
