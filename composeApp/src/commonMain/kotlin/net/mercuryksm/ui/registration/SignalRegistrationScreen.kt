@@ -10,16 +10,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.notification.*
+import net.mercuryksm.getPlatform
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignalRegistrationScreen(
     onSignalSaved: (SignalItem, (Result<Unit>) -> Unit) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    notificationManager: SignalNotificationManager? = null
 ) {
     var name by remember { mutableStateOf("") }
     var timeSlots by remember { mutableStateOf<List<TimeSlot>>(emptyList()) }
@@ -32,6 +36,93 @@ fun SignalRegistrationScreen(
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var isPreviewLoading by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    
+    val isAndroid = getPlatform().name.contains("Android")
+    val showPreviewButton = isAndroid && notificationManager?.isNotificationSupported() == true
+    val coroutineScope = rememberCoroutineScope()
+    
+    suspend fun previewNotification() {
+        if (notificationManager == null) return
+        
+        if (name.isBlank()) {
+            errorMessage = "Name is required for preview"
+            showErrorDialog = true
+            return
+        }
+        
+        if (timeSlots.isEmpty()) {
+            errorMessage = "At least one time slot is required for preview"
+            showErrorDialog = true
+            return
+        }
+        
+        // Check permission first
+        if (!notificationManager.hasNotificationPermission()) {
+            showPermissionDialog = true
+            return
+        }
+        
+        val settings = createPreviewNotificationSettings(
+            name = name.trim(),
+            description = description.trim(),
+            sound = sound,
+            vibration = vibration,
+            timeSlots = timeSlots
+        )
+        
+        isPreviewLoading = true
+        val result = notificationManager.showPreviewNotification(settings)
+        isPreviewLoading = false
+        
+        when (result) {
+            NotificationResult.PERMISSION_DENIED -> {
+                showPermissionDialog = true
+            }
+            NotificationResult.ERROR -> {
+                errorMessage = "Failed to show notification preview"
+                showErrorDialog = true
+            }
+            NotificationResult.NOT_SUPPORTED -> {
+                errorMessage = "Notifications not supported on this platform"
+                showErrorDialog = true
+            }
+            NotificationResult.SUCCESS -> {
+                // Success - no need to show anything
+            }
+        }
+    }
+    
+    suspend fun requestPermissionAndPreview() {
+        if (notificationManager == null) return
+        
+        isPreviewLoading = true
+        val permissionGranted = notificationManager.requestNotificationPermission()
+        
+        if (permissionGranted) {
+            // Permission granted, now show the notification
+            val settings = createPreviewNotificationSettings(
+                name = name.trim(),
+                description = description.trim(),
+                sound = sound,
+                vibration = vibration,
+                timeSlots = timeSlots
+            )
+            
+            val result = notificationManager.showPreviewNotification(settings)
+            if (result == NotificationResult.ERROR) {
+                errorMessage = "Failed to show notification preview"
+                showErrorDialog = true
+            }
+        } else {
+            errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+            showErrorDialog = true
+        }
+        
+        isPreviewLoading = false
+        showPermissionDialog = false
+    }
     
     Scaffold(
         topBar = {
@@ -72,6 +163,32 @@ fun SignalRegistrationScreen(
             )
             
             Spacer(modifier = Modifier.weight(1f))
+            
+            // Preview Notification Button (Android only)
+            if (showPreviewButton) {
+                OutlinedButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            previewNotification()
+                        }
+                    },
+                    enabled = !isPreviewLoading && !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    if (isPreviewLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Preview Notification")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             
             Button(
                 onClick = {
@@ -124,6 +241,17 @@ fun SignalRegistrationScreen(
             }
         }
     }
+    
+    // Permission Dialog
+    NotificationPermissionDialog(
+        showDialog = showPermissionDialog,
+        onDismiss = { showPermissionDialog = false },
+        onRequestPermission = {
+            coroutineScope.launch {
+                requestPermissionAndPreview()
+            }
+        }
+    )
     
     if (showErrorDialog) {
         AlertDialog(

@@ -15,6 +15,9 @@ import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.WeeklySignalViewModel
 import net.mercuryksm.ui.ColorPicker
+import net.mercuryksm.notification.*
+import net.mercuryksm.getPlatform
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,7 +25,8 @@ fun SignalEditScreen(
     viewModel: WeeklySignalViewModel,
     signalId: String,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    notificationManager: SignalNotificationManager? = null
 ) {
     val originalSignalItem = viewModel.getSignalItemById(signalId)
 
@@ -41,8 +45,95 @@ fun SignalEditScreen(
     var color by remember { mutableStateOf(originalSignalItem.color) }
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var isPreviewLoading by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    
+    val isAndroid = getPlatform().name.contains("Android")
+    val showPreviewButton = isAndroid && notificationManager?.isNotificationSupported() == true
+    val coroutineScope = rememberCoroutineScope()
 
     val scrollState = rememberScrollState()
+    
+    suspend fun previewNotification() {
+        if (notificationManager == null) return
+        
+        if (name.isBlank()) {
+            errorMessage = "Name is required for preview"
+            showErrorDialog = true
+            return
+        }
+        
+        if (timeSlots.isEmpty()) {
+            errorMessage = "At least one time slot is required for preview"
+            showErrorDialog = true
+            return
+        }
+        
+        // Check permission first
+        if (!notificationManager.hasNotificationPermission()) {
+            showPermissionDialog = true
+            return
+        }
+        
+        val settings = createPreviewNotificationSettings(
+            name = name.trim(),
+            description = description.trim(),
+            sound = sound,
+            vibration = vibration,
+            timeSlots = timeSlots
+        )
+        
+        isPreviewLoading = true
+        val result = notificationManager.showPreviewNotification(settings)
+        isPreviewLoading = false
+        
+        when (result) {
+            NotificationResult.PERMISSION_DENIED -> {
+                showPermissionDialog = true
+            }
+            NotificationResult.ERROR -> {
+                errorMessage = "Failed to show notification preview"
+                showErrorDialog = true
+            }
+            NotificationResult.NOT_SUPPORTED -> {
+                errorMessage = "Notifications not supported on this platform"
+                showErrorDialog = true
+            }
+            NotificationResult.SUCCESS -> {
+                // Success - no need to show anything
+            }
+        }
+    }
+    
+    suspend fun requestPermissionAndPreview() {
+        if (notificationManager == null) return
+        
+        isPreviewLoading = true
+        val permissionGranted = notificationManager.requestNotificationPermission()
+        
+        if (permissionGranted) {
+            // Permission granted, now show the notification
+            val settings = createPreviewNotificationSettings(
+                name = name.trim(),
+                description = description.trim(),
+                sound = sound,
+                vibration = vibration,
+                timeSlots = timeSlots
+            )
+            
+            val result = notificationManager.showPreviewNotification(settings)
+            if (result == NotificationResult.ERROR) {
+                errorMessage = "Failed to show notification preview"
+                showErrorDialog = true
+            }
+        } else {
+            errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+            showErrorDialog = true
+        }
+        
+        isPreviewLoading = false
+        showPermissionDialog = false
+    }
 
     fun saveSignalItem() {
         try {
@@ -100,6 +191,25 @@ fun SignalEditScreen(
                     }
                 },
                 actions = {
+                    if (showPreviewButton) {
+                        TextButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    previewNotification()
+                                }
+                            },
+                            enabled = !isPreviewLoading
+                        ) {
+                            if (isPreviewLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 1.dp
+                                )
+                            } else {
+                                Text("Preview")
+                            }
+                        }
+                    }
                     TextButton(
                         onClick = { saveSignalItem() }
                     ) {
@@ -133,6 +243,17 @@ fun SignalEditScreen(
             )
         }
     }
+    
+    // Permission Dialog
+    NotificationPermissionDialog(
+        showDialog = showPermissionDialog,
+        onDismiss = { showPermissionDialog = false },
+        onRequestPermission = {
+            coroutineScope.launch {
+                requestPermissionAndPreview()
+            }
+        }
+    )
 
     // Error dialog
     if (showErrorDialog) {
