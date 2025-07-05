@@ -1,47 +1,66 @@
 package net.mercuryksm.notification
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager as AndroidNotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
+import androidx.activity.ComponentActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import net.mercuryksm.data.TimeSlot
 import kotlin.coroutines.resume
 
-class AndroidSignalNotificationManagerCompose(
-    private val context: Context,
-    private val requestPermission: ((Boolean) -> Unit) -> Unit
-) : SignalNotificationManager {
+class AndroidSignalAlarmManager(
+    private val context: Context
+) : SignalAlarmManager {
     
     companion object {
-        private const val CHANNEL_ID = "weekly_signal_notifications"
-        private const val CHANNEL_NAME = "Weekly Signal"
-        private const val CHANNEL_DESCRIPTION = "Notifications for WeeklySignal reminders"
+        private const val CHANNEL_ID = "weekly_signal_alarms"
+        private const val CHANNEL_NAME = "Weekly Signal Test Alarms"
+        private const val CHANNEL_DESCRIPTION = "Test alarms for WeeklySignal reminders"
         private const val NOTIFICATION_ID = 1001
     }
+    
+    private var permissionHelper: NotificationPermissionHelper? = null
     
     init {
         createNotificationChannel()
     }
     
-    override suspend fun showPreviewNotification(settings: NotificationSettings): NotificationResult {
+    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult {
+        // Android版では現在スケジューリング機能をサポートしない（将来実装予定）
+        return AlarmResult.NOT_SUPPORTED
+    }
+    
+    override suspend fun cancelAlarm(alarmId: String): AlarmResult {
+        // Android版では現在スケジューリング機能をサポートしない（将来実装予定）
+        return AlarmResult.NOT_SUPPORTED
+    }
+    
+    override suspend fun cancelAllAlarms(): AlarmResult {
+        // Android版では現在スケジューリング機能をサポートしない（将来実装予定）
+        return AlarmResult.NOT_SUPPORTED
+    }
+    
+    override suspend fun getScheduledAlarms(): List<String> {
+        // Android版では現在スケジューリング機能をサポートしない（将来実装予定）
+        return emptyList()
+    }
+    
+    override suspend fun showTestAlarm(settings: AlarmSettings): AlarmResult {
         return withContext(Dispatchers.IO) {
             try {
-                if (!hasNotificationPermission()) {
-                    return@withContext NotificationResult.PERMISSION_DENIED
+                if (!hasAlarmPermission()) {
+                    return@withContext AlarmResult.PERMISSION_DENIED
                 }
                 
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -50,6 +69,7 @@ class AndroidSignalNotificationManagerCompose(
                     .setContentText(settings.message)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .apply {
                         if (settings.sound) {
                             setDefaults(NotificationCompat.DEFAULT_SOUND)
@@ -66,36 +86,65 @@ class AndroidSignalNotificationManagerCompose(
                     triggerVibration()
                 }
                 
-                NotificationResult.SUCCESS
+                AlarmResult.SUCCESS
             } catch (e: Exception) {
-                NotificationResult.ERROR
+                AlarmResult.ERROR
             }
         }
     }
     
-    override suspend fun hasNotificationPermission(): Boolean {
+    override suspend fun hasAlarmPermission(): Boolean {
+        // Android版では現在テスト通知のみサポート、スケジューリングはサポートしない
+        return hasNotificationPermission()
+    }
+    
+    override suspend fun requestAlarmPermission(): Boolean {
+        // Android版では現在テスト通知のみサポート、スケジューリングはサポートしない
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                // テスト通知用の通知権限のみリクエスト
+                if (permissionHelper == null && context is ComponentActivity) {
+                    try {
+                        permissionHelper = NotificationPermissionHelper(context)
+                    } catch (e: IllegalStateException) {
+                        continuation.resume(false)
+                        return@suspendCancellableCoroutine
+                    }
+                }
+                
+                permissionHelper?.requestNotificationPermission { isGranted ->
+                    continuation.resume(isGranted)
+                } ?: continuation.resume(false)
+            } catch (e: Exception) {
+                continuation.resume(false)
+            }
+        }
+    }
+    
+    override fun isAlarmSupported(): Boolean {
+        // Android版では現在テスト通知のみサポート、スケジューリングはサポートしない
+        // テストボタンを表示するためにtrueを返す
+        return true
+    }
+    
+    private fun hasNotificationPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
-                Manifest.permission.POST_NOTIFICATIONS
+                android.Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
     }
     
-    override suspend fun requestNotificationPermission(): Boolean {
-        return suspendCancellableCoroutine { continuation ->
-            requestPermission { isGranted ->
-                continuation.resume(isGranted)
-            }
-        }
-    }
-    
-    override fun isNotificationSupported(): Boolean = true
-    
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
@@ -104,6 +153,7 @@ class AndroidSignalNotificationManagerCompose(
                 description = CHANNEL_DESCRIPTION
                 enableLights(true)
                 enableVibration(true)
+                setSound(null, audioAttributes)
             }
             
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
@@ -130,37 +180,5 @@ class AndroidSignalNotificationManagerCompose(
         } catch (e: Exception) {
             // Vibration failed, ignore
         }
-    }
-}
-
-@Composable
-fun rememberNotificationManager(): SignalNotificationManager {
-    val context = LocalContext.current
-    
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        // This will be handled by the callback passed to requestPermission
-    }
-    
-    var permissionCallback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
-    
-    // Update the callback when permission result is received
-    LaunchedEffect(permissionLauncher) {
-        // Launcher is ready, but we'll handle the callback dynamically
-    }
-    
-    return remember(context) {
-        AndroidSignalNotificationManagerCompose(
-            context = context,
-            requestPermission = { callback ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permissionCallback = callback
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    callback(true)
-                }
-            }
-        )
     }
 }
