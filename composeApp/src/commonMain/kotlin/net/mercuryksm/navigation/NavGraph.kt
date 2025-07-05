@@ -7,11 +7,13 @@ import androidx.navigation.compose.composable
 import net.mercuryksm.ui.WeeklySignalView
 import net.mercuryksm.ui.registration.SignalRegistrationScreen
 import net.mercuryksm.ui.edit.SignalEditScreen
+import net.mercuryksm.notification.SignalNotificationManager
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    viewModel: net.mercuryksm.ui.WeeklySignalViewModel
+    viewModel: net.mercuryksm.ui.WeeklySignalViewModel,
+    notificationManager: SignalNotificationManager? = null
 ) {
     NavHost(
         navController = navController,
@@ -41,7 +43,8 @@ fun NavGraph(
                 },
                 onBackPressed = {
                     navController.popBackStack()
-                }
+                },
+                notificationManager = notificationManager
             )
         }
         
@@ -52,7 +55,8 @@ fun NavGraph(
                 signalId = signalId,
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                notificationManager = notificationManager
             )
         }
     }

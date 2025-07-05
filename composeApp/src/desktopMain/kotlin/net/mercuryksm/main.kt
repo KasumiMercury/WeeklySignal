@@ -5,6 +5,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import net.mercuryksm.data.database.DatabaseServiceFactory
+import net.mercuryksm.notification.createNotificationServiceFactory
 
 fun main() = application {
     Window(
@@ -16,6 +17,7 @@ fun main() = application {
         )
     ) {
         val databaseService = DatabaseServiceFactory().createSignalDatabaseService()
-        App(databaseService)
+        val notificationManager = createNotificationServiceFactory().createNotificationManager()
+        App(databaseService, notificationManager)
     }
 }
