@@ -5,6 +5,8 @@ import android.app.NotificationManager as AndroidNotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -24,7 +26,7 @@ class AndroidSignalAlarmManager(
 ) : SignalAlarmManager {
     
     companion object {
-        private const val CHANNEL_ID = "weekly_signal_alarms"
+        private const val CHANNEL_ID_BASE = "weekly_signal_alarms"
         private const val CHANNEL_NAME = "Weekly Signal Test Alarms"
         private const val CHANNEL_DESCRIPTION = "Test alarms for WeeklySignal reminders"
         private const val NOTIFICATION_ID = 1001
@@ -33,7 +35,8 @@ class AndroidSignalAlarmManager(
     private var permissionHelper: NotificationPermissionHelper? = null
     
     init {
-        createNotificationChannel()
+        // Initialize with default settings
+        createNotificationChannel(sound = true, vibration = true)
     }
     
     override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult {
@@ -63,7 +66,10 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
                 
-                val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                // Create channel with appropriate settings
+                val channelId = createNotificationChannel(settings.sound, settings.vibration)
+                
+                val notification = NotificationCompat.Builder(context, channelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
                     .setContentText(settings.message)
@@ -72,7 +78,13 @@ class AndroidSignalAlarmManager(
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .apply {
                         if (settings.sound) {
-                            setDefaults(NotificationCompat.DEFAULT_SOUND)
+                            // Use alarm sound instead of default notification sound
+                            val alarmUri = getAlarmSoundUri()
+                            setSound(alarmUri)
+                        }
+                        if (settings.vibration) {
+                            // Set vibration pattern for alarm
+                            setVibrate(longArrayOf(0, 300, 200, 300))
                         }
                     }
                     .build()
@@ -82,6 +94,7 @@ class AndroidSignalAlarmManager(
                     notificationManager.notify(NOTIFICATION_ID, notification)
                 }
                 
+                // Additional vibration for devices that support it
                 if (settings.vibration) {
                     triggerVibration()
                 }
@@ -138,26 +151,64 @@ class AndroidSignalAlarmManager(
         }
     }
     
-    private fun createNotificationChannel() {
+    private fun createNotificationChannel(sound: Boolean, vibration: Boolean): String {
+        val channelId = "${CHANNEL_ID_BASE}_${if (sound) "s" else "n"}_${if (vibration) "v" else "n"}"
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
+            
+            // Check if channel already exists
+            val existingChannel = notificationManager.getNotificationChannel(channelId)
+            if (existingChannel != null) {
+                return channelId
+            }
+            
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
             
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                channelId,
                 CHANNEL_NAME,
                 AndroidNotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = CHANNEL_DESCRIPTION
                 enableLights(true)
-                enableVibration(true)
-                setSound(null, audioAttributes)
+                enableVibration(vibration)
+                
+                if (sound) {
+                    // Use alarm sound for the channel
+                    val alarmUri = getAlarmSoundUri()
+                    setSound(alarmUri, audioAttributes)
+                } else {
+                    // Disable sound for the channel
+                    setSound(null, null)
+                }
+                
+                if (vibration) {
+                    // Set vibration pattern for alarm
+                    this.vibrationPattern = longArrayOf(0, 300, 200, 300)
+                }
             }
             
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
             notificationManager.createNotificationChannel(channel)
+        }
+        
+        return channelId
+    }
+    
+    private fun getAlarmSoundUri(): Uri {
+        return try {
+            // Try to get the default alarm sound
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                ?: Uri.parse("content://settings/system/notification_sound")
+        } catch (e: Exception) {
+            // Fallback to notification sound if alarm sound is not available
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: Uri.parse("content://settings/system/notification_sound")
         }
     }
     
@@ -166,15 +217,18 @@ class AndroidSignalAlarmManager(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 val vibrator = vibratorManager.defaultVibrator
-                vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+                // Use alarm-style vibration pattern
+                vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 200, 300), -1))
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+                    // Use alarm-style vibration pattern
+                    vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 200, 300), -1))
                 } else {
                     @Suppress("DEPRECATION")
-                    vibrator.vibrate(300)
+                    // For older devices, use a simple vibration pattern
+                    vibrator.vibrate(longArrayOf(0, 300, 200, 300), -1)
                 }
             }
         } catch (e: Exception) {
