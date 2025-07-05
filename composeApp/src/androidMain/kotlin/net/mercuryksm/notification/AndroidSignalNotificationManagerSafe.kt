@@ -1,5 +1,6 @@
 package net.mercuryksm.notification
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager as AndroidNotificationManager
 import android.content.Context
@@ -8,17 +9,17 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import androidx.activity.ComponentActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
-class AndroidSignalNotificationManager(
-    private val context: Context
+class AndroidSignalNotificationManagerSafe(
+    private val context: Context,
+    private val requestPermission: ((Boolean) -> Unit) -> Unit
 ) : SignalNotificationManager {
     
     companion object {
@@ -27,8 +28,6 @@ class AndroidSignalNotificationManager(
         private const val CHANNEL_DESCRIPTION = "Notifications for WeeklySignal reminders"
         private const val NOTIFICATION_ID = 1001
     }
-    
-    private var permissionHelper: NotificationPermissionHelper? = null
     
     init {
         createNotificationChannel()
@@ -74,7 +73,7 @@ class AndroidSignalNotificationManager(
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
-                android.Manifest.permission.POST_NOTIFICATIONS
+                Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -83,24 +82,8 @@ class AndroidSignalNotificationManager(
     
     override suspend fun requestNotificationPermission(): Boolean {
         return suspendCancellableCoroutine { continuation ->
-            try {
-                // Lazy initialization of permission helper
-                if (permissionHelper == null && context is ComponentActivity) {
-                    // Check if we can safely create the permission helper
-                    try {
-                        permissionHelper = NotificationPermissionHelper(context)
-                    } catch (e: IllegalStateException) {
-                        // Activity lifecycle state doesn't allow registration
-                        continuation.resume(false)
-                        return@suspendCancellableCoroutine
-                    }
-                }
-                
-                permissionHelper?.requestNotificationPermission { isGranted ->
-                    continuation.resume(isGranted)
-                } ?: continuation.resume(false)
-            } catch (e: Exception) {
-                continuation.resume(false)
+            requestPermission { isGranted ->
+                continuation.resume(isGranted)
             }
         }
     }

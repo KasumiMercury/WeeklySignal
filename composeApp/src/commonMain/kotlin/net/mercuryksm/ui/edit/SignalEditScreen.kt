@@ -46,6 +46,7 @@ fun SignalEditScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isPreviewLoading by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
     
     val isAndroid = getPlatform().name.contains("Android")
     val showPreviewButton = isAndroid && notificationManager?.isNotificationSupported() == true
@@ -68,6 +69,12 @@ fun SignalEditScreen(
             return
         }
         
+        // Check permission first
+        if (!notificationManager.hasNotificationPermission()) {
+            showPermissionDialog = true
+            return
+        }
+        
         val settings = createPreviewNotificationSettings(
             name = name.trim(),
             description = description.trim(),
@@ -82,8 +89,7 @@ fun SignalEditScreen(
         
         when (result) {
             NotificationResult.PERMISSION_DENIED -> {
-                errorMessage = "Notification permission required"
-                showErrorDialog = true
+                showPermissionDialog = true
             }
             NotificationResult.ERROR -> {
                 errorMessage = "Failed to show notification preview"
@@ -97,6 +103,36 @@ fun SignalEditScreen(
                 // Success - no need to show anything
             }
         }
+    }
+    
+    suspend fun requestPermissionAndPreview() {
+        if (notificationManager == null) return
+        
+        isPreviewLoading = true
+        val permissionGranted = notificationManager.requestNotificationPermission()
+        
+        if (permissionGranted) {
+            // Permission granted, now show the notification
+            val settings = createPreviewNotificationSettings(
+                name = name.trim(),
+                description = description.trim(),
+                sound = sound,
+                vibration = vibration,
+                timeSlots = timeSlots
+            )
+            
+            val result = notificationManager.showPreviewNotification(settings)
+            if (result == NotificationResult.ERROR) {
+                errorMessage = "Failed to show notification preview"
+                showErrorDialog = true
+            }
+        } else {
+            errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+            showErrorDialog = true
+        }
+        
+        isPreviewLoading = false
+        showPermissionDialog = false
     }
 
     fun saveSignalItem() {
@@ -207,6 +243,17 @@ fun SignalEditScreen(
             )
         }
     }
+    
+    // Permission Dialog
+    NotificationPermissionDialog(
+        showDialog = showPermissionDialog,
+        onDismiss = { showPermissionDialog = false },
+        onRequestPermission = {
+            coroutineScope.launch {
+                requestPermissionAndPreview()
+            }
+        }
+    )
 
     // Error dialog
     if (showErrorDialog) {
