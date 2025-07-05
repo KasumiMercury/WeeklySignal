@@ -25,6 +25,9 @@ fun TimeSlotDialog(
     var selectedHour by remember { mutableIntStateOf(timeSlot?.hour ?: 9) }
     var selectedMinute by remember { mutableIntStateOf(timeSlot?.minute ?: 0) }
     var showTimePicker by remember { mutableStateOf(false) }
+    
+    // Use platform-specific screen height detection
+    val useCompactTimeInput = shouldUseCompactTimeInput()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -88,10 +91,21 @@ fun TimeSlotDialog(
                     onClick = { showTimePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = String.format("%02d:%02d", selectedHour, selectedMinute),
-                        fontSize = 16.sp
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = String.format("%02d:%02d", selectedHour, selectedMinute),
+                            fontSize = 16.sp
+                        )
+                        if (useCompactTimeInput) {
+                            Text(
+                                text = "Tap to enter time",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -117,7 +131,7 @@ fun TimeSlotDialog(
         }
     )
 
-    // Time Picker Dialog
+    // Adaptive Time Picker Dialog
     if (showTimePicker) {
         val timePickerState = rememberTimePickerState(
             initialHour = selectedHour,
@@ -127,12 +141,25 @@ fun TimeSlotDialog(
 
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Select Time") },
+            title = { 
+                Text(
+                    text = if (useCompactTimeInput) "Enter Time" else "Select Time"
+                ) 
+            },
             text = {
-                TimePicker(
-                    state = timePickerState,
-                    modifier = Modifier.padding(16.dp)
-                )
+                if (useCompactTimeInput) {
+                    // Use TimeInput for compact display
+                    TimeInput(
+                        state = timePickerState,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                } else {
+                    // Use TimePicker for spacious display
+                    TimePicker(
+                        state = timePickerState,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
