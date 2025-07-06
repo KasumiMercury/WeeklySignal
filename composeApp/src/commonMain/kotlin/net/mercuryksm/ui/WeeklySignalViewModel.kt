@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
@@ -13,29 +15,23 @@ import net.mercuryksm.data.SignalRepository
 class WeeklySignalViewModel(
     private val signalRepository: SignalRepository
 ) : ViewModel() {
-    
+
     private val _signalItems = MutableStateFlow<List<SignalItem>>(emptyList())
     val signalItems: StateFlow<List<SignalItem>> = _signalItems.asStateFlow()
     val isLoading: StateFlow<Boolean> = signalRepository.isLoading
-    
+
     init {
         // Observe repository changes and update StateFlow
-        viewModelScope.launch {
-            // Initial load
-            _signalItems.value = signalRepository.getAllSignalItems()
-            
-            // Listen for changes - since we're using mutableStateListOf in repository,
-            // we need to periodically check or use a different approach
-            // For now, we'll update after each operation
-        }
+        signalRepository.signalItems
+            .onEach { items ->
+                _signalItems.value = items
+            }
+            .launchIn(viewModelScope)
     }
     
     fun addSignalItem(signalItem: SignalItem, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val result = signalRepository.addSignalItem(signalItem)
-            if (result.isSuccess) {
-                _signalItems.value = signalRepository.getAllSignalItems()
-            }
             onResult(result)
         }
     }
@@ -43,9 +39,6 @@ class WeeklySignalViewModel(
     fun updateSignalItem(signalItem: SignalItem, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val result = signalRepository.updateSignalItem(signalItem)
-            if (result.isSuccess) {
-                _signalItems.value = signalRepository.getAllSignalItems()
-            }
             onResult(result)
         }
     }
@@ -53,9 +46,6 @@ class WeeklySignalViewModel(
     fun removeSignalItem(signalItem: SignalItem, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val result = signalRepository.removeSignalItem(signalItem)
-            if (result.isSuccess) {
-                _signalItems.value = signalRepository.getAllSignalItems()
-            }
             onResult(result)
         }
     }
@@ -63,9 +53,6 @@ class WeeklySignalViewModel(
     fun refreshData(onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val result = signalRepository.refreshFromDatabase()
-            if (result.isSuccess) {
-                _signalItems.value = signalRepository.getAllSignalItems()
-            }
             onResult(result)
         }
     }
@@ -79,6 +66,6 @@ class WeeklySignalViewModel(
     }
     
     fun getAllSignalItems(): List<SignalItem> {
-        return signalRepository.getAllSignalItems()
+        return signalItems.value
     }
 }
