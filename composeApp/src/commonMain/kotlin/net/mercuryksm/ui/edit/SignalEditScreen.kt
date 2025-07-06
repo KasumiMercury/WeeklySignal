@@ -16,7 +16,6 @@ import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.WeeklySignalViewModel
 import net.mercuryksm.ui.ColorPicker
 import net.mercuryksm.notification.*
-import net.mercuryksm.getPlatform
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,7 +25,7 @@ fun SignalEditScreen(
     signalId: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    notificationManager: SignalNotificationManager? = null
+    alarmManager: SignalAlarmManager? = null
 ) {
     val originalSignalItem = viewModel.getSignalItemById(signalId)
 
@@ -48,34 +47,33 @@ fun SignalEditScreen(
     var isPreviewLoading by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     
-    val isAndroid = getPlatform().name.contains("Android")
-    val showPreviewButton = isAndroid && notificationManager?.isNotificationSupported() == true
+    val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
 
     val scrollState = rememberScrollState()
     
-    suspend fun previewNotification() {
-        if (notificationManager == null) return
+    suspend fun testAlarm() {
+        if (alarmManager == null) return
         
         if (name.isBlank()) {
-            errorMessage = "Name is required for preview"
+            errorMessage = "Name is required for test alarm"
             showErrorDialog = true
             return
         }
         
         if (timeSlots.isEmpty()) {
-            errorMessage = "At least one time slot is required for preview"
+            errorMessage = "At least one time slot is required for test alarm"
             showErrorDialog = true
             return
         }
         
         // Check permission first
-        if (!notificationManager.hasNotificationPermission()) {
+        if (!alarmManager.hasAlarmPermission()) {
             showPermissionDialog = true
             return
         }
         
-        val settings = createPreviewNotificationSettings(
+        val settings = createTestAlarmSettings(
             name = name.trim(),
             description = description.trim(),
             sound = sound,
@@ -84,36 +82,39 @@ fun SignalEditScreen(
         )
         
         isPreviewLoading = true
-        val result = notificationManager.showPreviewNotification(settings)
+        val result = alarmManager.showTestAlarm(settings)
         isPreviewLoading = false
         
         when (result) {
-            NotificationResult.PERMISSION_DENIED -> {
+            AlarmResult.PERMISSION_DENIED -> {
                 showPermissionDialog = true
             }
-            NotificationResult.ERROR -> {
-                errorMessage = "Failed to show notification preview"
+            AlarmResult.ERROR -> {
+                errorMessage = "Failed to show test alarm"
                 showErrorDialog = true
             }
-            NotificationResult.NOT_SUPPORTED -> {
-                errorMessage = "Notifications not supported on this platform"
+            AlarmResult.NOT_SUPPORTED -> {
+                errorMessage = "Alarms not supported on this platform"
                 showErrorDialog = true
             }
-            NotificationResult.SUCCESS -> {
+            AlarmResult.SUCCESS -> {
                 // Success - no need to show anything
+            }
+            else -> {
+                // Handle other cases if needed
             }
         }
     }
     
-    suspend fun requestPermissionAndPreview() {
-        if (notificationManager == null) return
+    suspend fun requestPermissionAndTest() {
+        if (alarmManager == null) return
         
         isPreviewLoading = true
-        val permissionGranted = notificationManager.requestNotificationPermission()
+        val permissionGranted = alarmManager.requestAlarmPermission()
         
         if (permissionGranted) {
-            // Permission granted, now show the notification
-            val settings = createPreviewNotificationSettings(
+            // Permission granted, now show the test alarm
+            val settings = createTestAlarmSettings(
                 name = name.trim(),
                 description = description.trim(),
                 sound = sound,
@@ -121,13 +122,13 @@ fun SignalEditScreen(
                 timeSlots = timeSlots
             )
             
-            val result = notificationManager.showPreviewNotification(settings)
-            if (result == NotificationResult.ERROR) {
-                errorMessage = "Failed to show notification preview"
+            val result = alarmManager.showTestAlarm(settings)
+            if (result == AlarmResult.ERROR) {
+                errorMessage = "Failed to show test alarm"
                 showErrorDialog = true
             }
         } else {
-            errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+            errorMessage = "Alarm permission was denied. Please enable exact alarms in device settings to use this feature."
             showErrorDialog = true
         }
         
@@ -195,7 +196,7 @@ fun SignalEditScreen(
                         TextButton(
                             onClick = {
                                 coroutineScope.launch {
-                                    previewNotification()
+                                    testAlarm()
                                 }
                             },
                             enabled = !isPreviewLoading
@@ -206,7 +207,7 @@ fun SignalEditScreen(
                                     strokeWidth = 1.dp
                                 )
                             } else {
-                                Text("Preview")
+                                Text("Test Alarm")
                             }
                         }
                     }
@@ -250,7 +251,7 @@ fun SignalEditScreen(
         onDismiss = { showPermissionDialog = false },
         onRequestPermission = {
             coroutineScope.launch {
-                requestPermissionAndPreview()
+                requestPermissionAndTest()
             }
         }
     )

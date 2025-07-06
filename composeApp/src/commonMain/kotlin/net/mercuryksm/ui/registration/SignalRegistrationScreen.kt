@@ -15,7 +15,6 @@ import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.notification.*
-import net.mercuryksm.getPlatform
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,7 +22,7 @@ import java.util.UUID
 fun SignalRegistrationScreen(
     onSignalSaved: (SignalItem, (Result<Unit>) -> Unit) -> Unit,
     onBackPressed: () -> Unit,
-    notificationManager: SignalNotificationManager? = null
+    alarmManager: SignalAlarmManager? = null
 ) {
     var name by remember { mutableStateOf("") }
     var timeSlots by remember { mutableStateOf<List<TimeSlot>>(emptyList()) }
@@ -39,32 +38,31 @@ fun SignalRegistrationScreen(
     var isPreviewLoading by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     
-    val isAndroid = getPlatform().name.contains("Android")
-    val showPreviewButton = isAndroid && notificationManager?.isNotificationSupported() == true
+    val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
     
-    suspend fun previewNotification() {
-        if (notificationManager == null) return
+    suspend fun testAlarm() {
+        if (alarmManager == null) return
         
         if (name.isBlank()) {
-            errorMessage = "Name is required for preview"
+            errorMessage = "Name is required for test alarm"
             showErrorDialog = true
             return
         }
         
         if (timeSlots.isEmpty()) {
-            errorMessage = "At least one time slot is required for preview"
+            errorMessage = "At least one time slot is required for test alarm"
             showErrorDialog = true
             return
         }
         
         // Check permission first
-        if (!notificationManager.hasNotificationPermission()) {
+        if (!alarmManager.hasAlarmPermission()) {
             showPermissionDialog = true
             return
         }
         
-        val settings = createPreviewNotificationSettings(
+        val settings = createTestAlarmSettings(
             name = name.trim(),
             description = description.trim(),
             sound = sound,
@@ -73,36 +71,41 @@ fun SignalRegistrationScreen(
         )
         
         isPreviewLoading = true
-        val result = notificationManager.showPreviewNotification(settings)
+        val result = alarmManager.showTestAlarm(settings)
         isPreviewLoading = false
         
         when (result) {
-            NotificationResult.PERMISSION_DENIED -> {
+            AlarmResult.PERMISSION_DENIED -> {
                 showPermissionDialog = true
             }
-            NotificationResult.ERROR -> {
-                errorMessage = "Failed to show notification preview"
+            AlarmResult.ERROR -> {
+                errorMessage = "Failed to show test alarm"
                 showErrorDialog = true
             }
-            NotificationResult.NOT_SUPPORTED -> {
-                errorMessage = "Notifications not supported on this platform"
+            AlarmResult.NOT_SUPPORTED -> {
+                errorMessage = "Alarms not supported on this platform"
                 showErrorDialog = true
             }
-            NotificationResult.SUCCESS -> {
+            AlarmResult.SUCCESS -> {
                 // Success - no need to show anything
+            }
+            AlarmResult.ALREADY_SCHEDULED, AlarmResult.ALARM_NOT_FOUND -> {
+                // These states shouldn't occur for test alarms, but handle gracefully
+                errorMessage = "Unexpected alarm state"
+                showErrorDialog = true
             }
         }
     }
     
-    suspend fun requestPermissionAndPreview() {
-        if (notificationManager == null) return
+    suspend fun requestPermissionAndTest() {
+        if (alarmManager == null) return
         
         isPreviewLoading = true
-        val permissionGranted = notificationManager.requestNotificationPermission()
+        val permissionGranted = alarmManager.requestAlarmPermission()
         
         if (permissionGranted) {
-            // Permission granted, now show the notification
-            val settings = createPreviewNotificationSettings(
+            // Permission granted, now show the test alarm
+            val settings = createTestAlarmSettings(
                 name = name.trim(),
                 description = description.trim(),
                 sound = sound,
@@ -110,13 +113,13 @@ fun SignalRegistrationScreen(
                 timeSlots = timeSlots
             )
             
-            val result = notificationManager.showPreviewNotification(settings)
-            if (result == NotificationResult.ERROR) {
-                errorMessage = "Failed to show notification preview"
+            val result = alarmManager.showTestAlarm(settings)
+            if (result == AlarmResult.ERROR) {
+                errorMessage = "Failed to show test alarm"
                 showErrorDialog = true
             }
         } else {
-            errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+            errorMessage = "Alarm permission was denied. Please enable alarms in device settings to use this feature."
             showErrorDialog = true
         }
         
@@ -164,12 +167,12 @@ fun SignalRegistrationScreen(
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Preview Notification Button (Android only)
+            // Test Alarm Button (Android only)
             if (showPreviewButton) {
                 OutlinedButton(
                     onClick = {
                         coroutineScope.launch {
-                            previewNotification()
+                            testAlarm()
                         }
                     },
                     enabled = !isPreviewLoading && !isLoading,
@@ -183,7 +186,7 @@ fun SignalRegistrationScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Preview Notification")
+                        Text("Test Alarm")
                     }
                 }
                 
@@ -248,7 +251,7 @@ fun SignalRegistrationScreen(
         onDismiss = { showPermissionDialog = false },
         onRequestPermission = {
             coroutineScope.launch {
-                requestPermissionAndPreview()
+                requestPermissionAndTest()
             }
         }
     )

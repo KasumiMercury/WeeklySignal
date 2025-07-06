@@ -2,8 +2,8 @@ package net.mercuryksm.notification
 
 import net.mercuryksm.data.SignalItem
 
-fun SignalItem.toNotificationSettings(): NotificationSettings {
-    return NotificationSettings(
+fun SignalItem.toAlarmSettings(): AlarmSettings {
+    return AlarmSettings(
         sound = this.sound,
         vibration = this.vibration,
         title = this.name,
@@ -15,17 +15,17 @@ fun SignalItem.toNotificationSettings(): NotificationSettings {
     )
 }
 
-fun createPreviewNotificationSettings(
+fun createTestAlarmSettings(
     name: String,
     description: String,
     sound: Boolean,
     vibration: Boolean,
     timeSlots: List<net.mercuryksm.data.TimeSlot>
-): NotificationSettings {
-    return NotificationSettings(
+): AlarmSettings {
+    return AlarmSettings(
         sound = sound,
         vibration = vibration,
-        title = name.ifBlank { "Signal Preview" },
+        title = name.ifBlank { "Signal Test Alarm" },
         message = if (description.isNotBlank()) {
             description
         } else {

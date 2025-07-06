@@ -12,22 +12,22 @@ import net.mercuryksm.navigation.NavGraph
 import net.mercuryksm.ui.WeeklySignalViewModel
 import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.database.SignalDatabaseService
-import net.mercuryksm.notification.SignalNotificationManager
-import net.mercuryksm.notification.createNotificationServiceFactory
+import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.notification.createAlarmServiceFactory
 
 @Composable
 @Preview
 fun App(
     databaseService: SignalDatabaseService? = null,
-    notificationManager: SignalNotificationManager? = null
+    alarmManager: SignalAlarmManager? = null
 ) {
     MaterialTheme {
         val navController = rememberNavController()
         val repository = remember(databaseService) { SignalRepository(databaseService) }
         val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel(repository) }
-        val notificationService = remember(notificationManager) { 
-            notificationManager ?: try {
-                createNotificationServiceFactory().createNotificationManager()
+        val alarmService = remember(alarmManager) { 
+            alarmManager ?: try {
+                createAlarmServiceFactory().createAlarmManager()
             } catch (e: Exception) {
                 null
             }
@@ -36,7 +36,7 @@ fun App(
         NavGraph(
             navController = navController,
             viewModel = viewModel,
-            notificationManager = notificationService
+            alarmManager = alarmService
         )
     }
 }
