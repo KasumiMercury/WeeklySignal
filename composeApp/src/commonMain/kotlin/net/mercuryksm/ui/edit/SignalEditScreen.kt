@@ -1,10 +1,12 @@
 package net.mercuryksm.ui.edit
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,6 +48,7 @@ fun SignalEditScreen(
     var errorMessage by remember { mutableStateOf("") }
     var isPreviewLoading by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     
     val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
@@ -174,6 +177,25 @@ fun SignalEditScreen(
         }
     }
 
+    fun deleteSignalItem() {
+        try {
+            viewModel.removeSignalItem(originalSignalItem) { result ->
+                result.onSuccess {
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(50)
+                        onNavigateBack()
+                    }
+                }.onFailure { exception ->
+                    errorMessage = exception.message ?: "Failed to delete signal"
+                    showErrorDialog = true
+                }
+            }
+        } catch (e: Exception) {
+            errorMessage = e.message ?: "Failed to delete signal"
+            showErrorDialog = true
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -242,6 +264,32 @@ fun SignalEditScreen(
                 color = color,
                 onColorChange = { color = it }
             )
+            
+            // Delete Button
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            OutlinedButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Delete Signal",
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
     
@@ -255,6 +303,33 @@ fun SignalEditScreen(
             }
         }
     )
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Signal") },
+            text = { Text("Are you sure you want to delete this signal? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteSignalItem()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Error dialog
     if (showErrorDialog) {

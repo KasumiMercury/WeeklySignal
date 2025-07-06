@@ -41,7 +41,7 @@ fun WeeklySignalView(
     onAddSignalClick: () -> Unit = {},
     onItemClick: (SignalItem) -> Unit = {}
 ) {
-    val items by remember { derivedStateOf { viewModel.getAllSignalItems() } }
+    val items by viewModel.signalItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     
     var showErrorDialog by remember { mutableStateOf(false) }
