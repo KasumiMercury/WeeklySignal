@@ -181,7 +181,10 @@ fun SignalEditScreen(
         try {
             viewModel.removeSignalItem(originalSignalItem) { result ->
                 result.onSuccess {
-                    onNavigateBack()
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(50)
+                        onNavigateBack()
+                    }
                 }.onFailure { exception ->
                     errorMessage = exception.message ?: "Failed to delete signal"
                     showErrorDialog = true
