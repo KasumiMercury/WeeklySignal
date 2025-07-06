@@ -1,6 +1,7 @@
 package net.mercuryksm.notification
 
 import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.data.SignalItem
 
 interface SignalAlarmManager {
     /**
@@ -42,4 +43,32 @@ interface SignalAlarmManager {
      * Checks if alarm features are supported on this platform
      */
     fun isAlarmSupported(): Boolean
+    
+    /**
+     * Schedules alarms for all time slots in a SignalItem
+     */
+    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {
+        return emptyList() // Default implementation - platform specific overrides will provide actual functionality
+    }
+    
+    /**
+     * Cancels all alarms for a SignalItem
+     */
+    suspend fun cancelSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {
+        return emptyList() // Default implementation
+    }
+    
+    /**
+     * Updates alarms when a SignalItem is modified
+     */
+    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmResult> {
+        return emptyList() // Default implementation
+    }
+    
+    /**
+     * Checks if alarms are enabled for a specific SignalItem
+     */
+    suspend fun isSignalItemAlarmsEnabled(signalItemId: String): Boolean {
+        return false // Default implementation
+    }
 }
