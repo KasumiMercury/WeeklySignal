@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    kotlin("plugin.serialization") version "2.0.21"
 }
 
 kotlin {
@@ -42,6 +43,7 @@ kotlin {
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
