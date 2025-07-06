@@ -24,7 +24,6 @@ fun App(
     MaterialTheme {
         val navController = rememberNavController()
         val repository = remember(databaseService) { SignalRepository(databaseService) }
-        val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel(repository) }
         val alarmService = remember(alarmManager) { 
             alarmManager ?: try {
                 createAlarmServiceFactory().createAlarmManager()
@@ -32,6 +31,7 @@ fun App(
                 null
             }
         }
+        val viewModel: WeeklySignalViewModel = viewModel { WeeklySignalViewModel(repository, alarmService) }
         
         NavGraph(
             navController = navController,
