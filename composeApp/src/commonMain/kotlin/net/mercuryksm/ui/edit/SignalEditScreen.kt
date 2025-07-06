@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ fun SignalEditScreen(
     var errorMessage by remember { mutableStateOf("") }
     var isPreviewLoading by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     
     val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
@@ -174,6 +176,22 @@ fun SignalEditScreen(
         }
     }
 
+    fun deleteSignalItem() {
+        try {
+            viewModel.removeSignalItem(originalSignalItem) { result ->
+                result.onSuccess {
+                    onNavigateBack()
+                }.onFailure { exception ->
+                    errorMessage = exception.message ?: "Failed to delete signal"
+                    showErrorDialog = true
+                }
+            }
+        } catch (e: Exception) {
+            errorMessage = e.message ?: "Failed to delete signal"
+            showErrorDialog = true
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -192,6 +210,15 @@ fun SignalEditScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { showDeleteDialog = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                     if (showPreviewButton) {
                         TextButton(
                             onClick = {
@@ -255,6 +282,33 @@ fun SignalEditScreen(
             }
         }
     )
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Signal") },
+            text = { Text("Are you sure you want to delete this signal? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteSignalItem()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Error dialog
     if (showErrorDialog) {
