@@ -40,16 +40,16 @@ class AlarmReceiver : BroadcastReceiver() {
         val alarmInfo = try {
             json.decodeFromString<AndroidSignalAlarmManager.AlarmInfo>(alarmInfoJson)
         } catch (e: Exception) {
-            // For legacy format compatibility
-            handleLegacyAlarm(context, intent)
+            // If JSON parsing fails, ignore the alarm as we no longer support legacy format
             return
         }
         
         // Show notification
         showAlarmNotification(context, alarmInfo)
         
-        // For Android 12+, setRepeating became inaccurate, so manually set next alarm
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isRepeating) {
+        // For modern Android (API 24+), we use single alarms and reschedule manually
+        // This provides consistent behavior across all supported Android versions
+        if (isRepeating) {
             scheduleNextWeekAlarm(context, alarmInfo)
         }
     }
@@ -101,7 +101,7 @@ class AlarmReceiver : BroadcastReceiver() {
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
-        // Check permissions
+        // Check permissions for Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
             return
         }
@@ -136,7 +136,7 @@ class AlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        // Set next alarm
+        // Use modern alarm scheduling for all supported Android versions
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             nextAlarmTime,
@@ -157,29 +157,6 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
-    private fun handleLegacyAlarm(context: Context, intent: Intent) {
-        // Legacy alarm processing (for compatibility)
-        val alarmId = intent.getStringExtra("alarm_id") ?: return
-        val title = intent.getStringExtra("title") ?: "WeeklySignal Alarm"
-        val message = intent.getStringExtra("message") ?: "Time for your scheduled task"
-        val sound = intent.getBooleanExtra("sound", true)
-        val vibration = intent.getBooleanExtra("vibration", true)
-        
-        val alarmInfo = AndroidSignalAlarmManager.AlarmInfo(
-            alarmId = alarmId,
-            signalItemId = "",
-            timeSlotId = "",
-            title = title,
-            message = message,
-            sound = sound,
-            vibration = vibration,
-            hour = 0,
-            minute = 0,
-            dayOfWeek = 0
-        )
-        
-        showAlarmNotification(context, alarmInfo)
-    }
     
     private fun handleDismiss(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notification_id", 0)
@@ -220,22 +197,18 @@ class AlarmReceiver : BroadcastReceiver() {
     
     private fun triggerVibration(context: Context) {
         try {
+            val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12+: Use VibratorManager for better control
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 val vibrator = vibratorManager.defaultVibrator
-                val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
                 vibrator.vibrate(VibrationEffect.createWaveform(vibrationPattern, -1))
             } else {
+                // Android 7-11: Use VibrationEffect with legacy Vibrator
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-                    vibrator.vibrate(VibrationEffect.createWaveform(vibrationPattern, -1))
-                } else {
-                    @Suppress("DEPRECATION")
-                    val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-                    vibrator.vibrate(vibrationPattern, -1)
-                }
+                vibrator.vibrate(VibrationEffect.createWaveform(vibrationPattern, -1))
             }
         } catch (e: Exception) {
             // Vibration failed, ignore

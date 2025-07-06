@@ -225,6 +225,7 @@ class AndroidSignalAlarmManager(
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager.canScheduleExactAlarms()
         } else {
+            // For Android 7-11, exact alarms don't require special permission
             true
         }
     }
@@ -356,12 +357,11 @@ class AndroidSignalAlarmManager(
     }
 
     private fun setRepeatingAlarmWithPermissionCheck(firstAlarmTime: Long, pendingIntent: PendingIntent) {
-        val interval = AlarmManager.INTERVAL_DAY * 7 // One week
-
+        // Modern Android (API 24+): Use setExactAndAllowWhileIdle for precise timing
+        // Note: For Android 12+, we use single alarms and reschedule in AlarmReceiver
+        // For Android 7-11, we can still use setRepeating but prefer exact alarms for consistency
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
-                // Android 12+: setRepeating became inaccurate, use setExactAndAllowWhileIdle
-                // However, this is a one-time alarm, so AlarmReceiver needs to reschedule the next one
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     firstAlarmTime,
@@ -370,20 +370,11 @@ class AndroidSignalAlarmManager(
             } else {
                 throw SecurityException("Exact alarm permission not granted")
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Android 6.0+: Use setRepeating with Doze mode support
-            alarmManager.setRepeating(
-                AlarmManager.RTC_WAKEUP,
-                firstAlarmTime,
-                interval,
-                pendingIntent
-            )
         } else {
-            // Android 6.0-: Use normal setRepeating
-            alarmManager.setRepeating(
+            // Android 7-11: Use setExactAndAllowWhileIdle for consistent behavior
+            alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 firstAlarmTime,
-                interval,
                 pendingIntent
             )
         }
@@ -469,11 +460,13 @@ class AndroidSignalAlarmManager(
 
     private fun hasNotificationPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+: Requires POST_NOTIFICATIONS permission
             ContextCompat.checkSelfPermission(
                 context,
                 android.Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         } else {
+            // Android 7-12: Check if notifications are enabled system-wide
             NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
     }
@@ -481,6 +474,8 @@ class AndroidSignalAlarmManager(
     private fun createNotificationChannel(sound: Boolean, vibration: Boolean): String {
         val channelId = "${CHANNEL_ID_BASE}_${if (sound) "s" else "n"}_${if (vibration) "v" else "n"}"
 
+        // Android 8.0+ (API 26+): Notification channels are required
+        // Since our minSdk is 24, we need to check for API 26+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
@@ -537,18 +532,15 @@ class AndroidSignalAlarmManager(
     private fun triggerVibration() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12+: Use VibratorManager for better control
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 val vibrator = vibratorManager.defaultVibrator
                 vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
             } else {
+                // Android 7-11: Use VibrationEffect with legacy Vibrator
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
-                } else {
-                    @Suppress("DEPRECATION")
-                    vibrator.vibrate(VIBRATION_PATTERN, -1)
-                }
+                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
             }
         } catch (e: Exception) {
             // Vibration failed, ignore
