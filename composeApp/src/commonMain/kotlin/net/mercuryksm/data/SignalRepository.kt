@@ -1,7 +1,5 @@
 package net.mercuryksm.data
 
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import net.mercuryksm.data.database.SignalDatabaseService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +13,9 @@ class SignalRepository(
     private val databaseService: SignalDatabaseService? = null,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
-    private val _signalItems = mutableStateListOf<SignalItem>()
-    val signalItems: SnapshotStateList<SignalItem> = _signalItems
-    
+    private val _signalItems = MutableStateFlow<List<SignalItem>>(emptyList())
+    val signalItems: StateFlow<List<SignalItem>> = _signalItems.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
@@ -36,7 +34,7 @@ class SignalRepository(
             }
             
             if (result.isSuccess) {
-                _signalItems.add(signalItem)
+                _signalItems.value = _signalItems.value + signalItem
             }
             
             result
@@ -58,9 +56,11 @@ class SignalRepository(
             }
             
             if (result.isSuccess) {
-                val index = _signalItems.indexOfFirst { it.id == updatedItem.id }
+                val index = _signalItems.value.indexOfFirst { it.id == updatedItem.id }
                 if (index != -1) {
-                    _signalItems[index] = updatedItem
+                    _signalItems.value = _signalItems.value.toMutableList().apply {
+                        this[index] = updatedItem
+                    }
                 }
             }
             
@@ -83,7 +83,7 @@ class SignalRepository(
             }
             
             if (result.isSuccess) {
-                _signalItems.remove(signalItem)
+                _signalItems.value = _signalItems.value.filterNot { it.id == signalItem.id }
             }
             
             result
@@ -95,17 +95,17 @@ class SignalRepository(
     }
     
     fun getSignalItemsForDay(dayOfWeek: DayOfWeekJp): List<SignalItem> {
-        return _signalItems.filter { signalItem ->
+        return _signalItems.value.filter { signalItem ->
             signalItem.timeSlots.any { it.dayOfWeek == dayOfWeek }
         }
     }
     
     fun getSignalItemById(id: String): SignalItem? {
-        return _signalItems.find { it.id == id }
+        return _signalItems.value.find { it.id == id }
     }
     
     fun getAllSignalItems(): List<SignalItem> {
-        return _signalItems.toList()
+        return _signalItems.value
     }
     
     suspend fun refreshFromDatabase(): Result<Unit> {
@@ -115,8 +115,7 @@ class SignalRepository(
             if (databaseService != null) {
                 val result = databaseService.getAllSignalItems()
                 result.onSuccess { items ->
-                    _signalItems.clear()
-                    _signalItems.addAll(items)
+                    _signalItems.value = items
                 }
                 Result.success(Unit)
             } else {
@@ -134,8 +133,7 @@ class SignalRepository(
             coroutineScope.launch {
                 databaseService.getAllSignalItems()
                     .onSuccess { items ->
-                        _signalItems.clear()
-                        _signalItems.addAll(items)
+                        _signalItems.value = items
                     }
                     .onFailure {
                         loadSampleData()
@@ -202,6 +200,6 @@ class SignalRepository(
             )
         )
         
-        _signalItems.addAll(sampleItems)
+        _signalItems.value = sampleItems
     }
 }
