@@ -1,5 +1,6 @@
 package net.mercuryksm.ui.edit
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -210,15 +211,6 @@ fun SignalEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { showDeleteDialog = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
                     if (showPreviewButton) {
                         TextButton(
                             onClick = {
@@ -269,6 +261,32 @@ fun SignalEditScreen(
                 color = color,
                 onColorChange = { color = it }
             )
+            
+            // Delete Button
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            OutlinedButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Delete Signal",
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
     
