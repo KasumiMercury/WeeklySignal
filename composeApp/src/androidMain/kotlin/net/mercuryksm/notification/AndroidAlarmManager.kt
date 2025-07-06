@@ -8,6 +8,8 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -98,7 +100,12 @@ class AndroidSignalAlarmManager(
                 if (settings.vibration) {
                     triggerVibration()
                 }
-                
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    // Cancel the notification after a short delay
+                    notificationManager.cancel(NOTIFICATION_ID)
+                }, 5000)
+
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
                 AlarmResult.ERROR
