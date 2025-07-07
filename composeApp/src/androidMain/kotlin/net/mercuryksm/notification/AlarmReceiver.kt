@@ -12,6 +12,7 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.media.RingtoneManager
+import androidx.annotation.RequiresApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import java.util.Calendar
@@ -69,7 +70,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
-            .setFullScreenIntent(createFullScreenIntent(context, alarmInfo.alarmId), true)
+            .setContentIntent(createMainActivityIntent(context))
             .apply {
                 if (alarmInfo.sound) {
                     setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
@@ -166,15 +167,14 @@ class AlarmReceiver : BroadcastReceiver() {
         notificationManager.cancel(notificationId)
     }
     
-    private fun createFullScreenIntent(context: Context, alarmId: String): PendingIntent {
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("alarm_id", alarmId)
-            putExtra("action", "full_screen")
+    private fun createMainActivityIntent(context: Context): PendingIntent {
+        val intent = Intent(context, net.mercuryksm.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         
-        return PendingIntent.getBroadcast(
+        return PendingIntent.getActivity(
             context,
-            "${alarmId}_fullscreen".hashCode(),
+            0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -195,6 +195,7 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun triggerVibration(context: Context) {
         try {
             val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
