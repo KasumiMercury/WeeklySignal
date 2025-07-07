@@ -55,6 +55,7 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun showAlarmNotification(
         context: Context,
         alarmInfo: AndroidSignalAlarmManager.AlarmInfo
