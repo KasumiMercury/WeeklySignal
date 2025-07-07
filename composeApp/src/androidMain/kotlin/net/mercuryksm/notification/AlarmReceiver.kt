@@ -34,13 +34,18 @@ class AlarmReceiver : BroadcastReceiver() {
     
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            DISMISS_ACTION -> handleDismiss(context, intent)
-            else -> handleAlarm(context, intent)
+        try {
+            when (intent.action) {
+                DISMISS_ACTION -> handleDismiss(context, intent)
+                else -> handleAlarm(context, intent)
+            }
+        } catch (e: Exception) {
+            // Log the error to prevent receiver from crashing
+            e.printStackTrace()
+        } finally {
+            // Clean up finished ringtones to prevent memory leaks
+            cleanupFinishedRingtones()
         }
-        
-        // Clean up finished ringtones to prevent memory leaks
-        cleanupFinishedRingtones()
     }
     
     @RequiresApi(Build.VERSION_CODES.O)
@@ -84,9 +89,19 @@ class AlarmReceiver : BroadcastReceiver() {
             .setContentIntent(createMainActivityIntent(context))
             .apply {
                 if (alarmInfo.sound) {
-                    setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+                    // Use channel default sound
                     // Start playing alarm sound and manage it for potential stopping
                     playAndManageAlarmSound(context, alarmInfo.alarmId)
+                } else {
+                    // Disable sound for this notification
+                    setSound(null)
+                }
+                
+                if (alarmInfo.vibration) {
+                    // Use channel default vibration
+                } else {
+                    // Disable vibration for this notification
+                    setVibrate(null)
                 }
                 
                 // Dismiss action (no snooze per requirements)
@@ -103,7 +118,7 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.notify(notificationId, notificationBuilder.build())
         }
         
-        // Vibration
+        // Vibration - only trigger if enabled in AlarmInfo
         if (alarmInfo.vibration) {
             triggerVibration(context)
         }
