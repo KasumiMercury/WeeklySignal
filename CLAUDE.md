@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targeting Android and Desktop platforms. It displays a weekly schedule interface showing SignalItems (user-defined notification items) across days of the week with time-based horizontal scrolling.
+WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targeting Android and Desktop platforms. It displays a weekly schedule interface showing SignalItems (user-defined notification items) across days of the week with time-based horizontal scrolling, and includes alarm/notification functionality.
 
 ## Architecture
 
 - **Package**: `net.mercuryksm`
 - **Multiplatform Structure**:
   - `commonMain/`: Shared code for all platforms (UI, business logic, data models)
-  - `androidMain/`: Android-specific implementations
-  - `desktopMain/`: Desktop-specific implementations
+  - `androidMain/`: Android-specific implementations (alarms, database, notifications)
+  - `desktopMain/`: Desktop-specific implementations (database, mock alarms)
   - `commonTest/`: Shared test code
 
 ## Application Structure
@@ -26,21 +26,23 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 #### Database Layer (`data/database/`)
 - **Room KMP Implementation**: Cross-platform database using Room 2.7.2 with KSP annotation processing
 - **AppDatabase.kt**: Main Room database class with `@Database` annotation and expect/actual constructor pattern
-- **SignalDao.kt/TimeSlotDao.kt**: Room DAO interfaces with SQL query annotations for type-safe database operations
-- **SignalEntity.kt/TimeSlotEntity.kt**: Room entity models with `@Entity`, `@PrimaryKey`, and foreign key constraints
-- **DatabaseRepository.kt**: Common interface for database operations implemented by platform-specific repositories
-- **EntityMappers.kt**: Conversion utilities between domain models (SignalItem/TimeSlot) and database entities
-- **Platform-Specific Services**: DesktopSignalDatabaseService, AndroidSignalDatabaseService for platform-specific database operations
-- **DatabaseServiceFactory.kt**: Expect/actual factory pattern for creating platform-specific database services
-- **Platform-Specific Builders**: AndroidDatabaseBuilder (Context-based) and DesktopDatabaseBuilder (temp directory)
+- **SignalDao.kt/TimeSlotDao.kt/AlarmStateDao.kt**: Room DAO interfaces with SQL query annotations
+- **SignalEntity.kt/TimeSlotEntity.kt/AlarmStateEntity.kt**: Room entity models with proper annotations and foreign key constraints
+- **EntityMappers.kt**: Conversion utilities between domain models and database entities
+- **DatabaseServiceFactory.kt**: Expect/actual factory pattern for platform-specific database services
 
-**⚠️ Current Status**: Database service not initialized in application - all operations fall back to in-memory sample data. See "Current Implementation Issues" section for details.
+### Notification System (`notification/`)
+- **SignalAlarmManager.kt**: Common interface for alarm/notification management
+- **AlarmSettings.kt**: Configuration for alarm behavior (sound, vibration, message)
+- **Platform-Specific Implementations**:
+  - **Android**: AndroidAlarmManager with system AlarmManager integration, notification channels, permissions
+  - **Desktop**: DesktopAlarmManager with mock implementation for development
 
 ### UI Layer (`ui/`)
-- **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling, supports multiple time slots per SignalItem
-- **SignalItemCard.kt**: Individual signal item display component (120dp width, text truncation)
+- **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling
+- **SignalItemCard.kt**: Individual signal item display component (120dp width, color-coded)
 - **TimeSlotColumn.kt**: Vertical column showing all days for a specific time slot
-- **WeeklySignalViewModel.kt**: ViewModel for managing SignalItem state and repository operations
+- **WeeklySignalViewModel.kt**: ViewModel managing SignalItem state and alarm scheduling
 
 #### Registration Flow (`ui/registration/`)
 - **SignalRegistrationScreen.kt**: Screen for creating new SignalItems with multiple time slots
@@ -51,11 +53,6 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **TimeSlotEditor.kt**: Component for managing multiple time slots in a list format
 - **TimeSlotDialog.kt**: Dialog for selecting individual day/time combinations
 
-### Main Components
-- **App.kt**: Main Compose UI entry point integrating WeeklySignalView
-- **Platform.kt**: Platform abstraction interface
-- **main.kt** (desktop): Desktop application entry point with Window configuration
-
 ### Navigation (`navigation/`)
 - **Navigation.kt**: Screen route definitions including SignalEdit route with parameters
 - **NavGraph.kt**: Navigation graph with routes for main view, registration, and editing
@@ -64,14 +61,14 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 ### Build and Run
 ```bash
-# Build the project (full build - may fail due to Android SDK environment issues)
-./gradlew build
-
 # RECOMMENDED: Desktop-only compilation for development and verification
 ./gradlew :composeApp:compileKotlinDesktop
 
 # Run desktop application
 ./gradlew run
+
+# Full build (may fail due to Android SDK environment issues)
+./gradlew build
 
 # Android builds (may fail in current environment due to SDK configuration)
 ./gradlew installDebug        # Requires emulator/device and proper Android SDK setup
@@ -88,20 +85,6 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 # Check Room annotation processing for desktop
 ./gradlew :composeApp:kspDesktopKotlin
-
-# Verify database operations (after fixing database service initialization)
-./gradlew run  # Desktop app with database persistence
-```
-
-### Database Service Verification
-```bash
-# Test database service integration after fixes
-./gradlew :composeApp:compileKotlinDesktop  # Verify compilation
-./gradlew run  # Run desktop app and test SignalItem persistence
-
-# Check for database file creation
-# Desktop: Check ${TEMP_DIR}/weekly_signal.db exists after creating SignalItems
-# Android: Use Android Studio Database Inspector or adb shell
 ```
 
 ### Testing
@@ -111,9 +94,6 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 # Full test suite (may fail due to Android environment issues)
 ./gradlew test
-
-# Android unit tests (may fail due to SDK configuration)
-./gradlew testDebugUnitTest
 ```
 
 ### Distribution
@@ -129,13 +109,13 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 ## Configuration Files
 
-- **gradle/libs.versions.toml**: Centralized dependency version management including Room 2.7.2, KSP 2.1.21-2.0.1, and SQLite 2.5.2
+- **gradle/libs.versions.toml**: Centralized dependency version management including Room 2.7.2, KSP 2.2.0-2.0.2, and SQLite 2.5.2
 - **composeApp/build.gradle.kts**: Main module configuration with Compose Multiplatform setup, Room plugin, and KSP configuration
 - **build.gradle.kts**: Root project configuration with plugin declarations
 
 ### Room Database Configuration
 - **Dependencies**: Room runtime, SQLite bundled, and Room compiler for annotation processing
-- **KSP Setup**: Configured for commonMainMetadata and desktop targets for cross-platform code generation
+- **KSP Setup**: Configured for commonMainMetadata, desktop, and Android targets
 - **Schema Export**: Enabled to `composeApp/schemas/` directory for version control and migration planning
 
 ## UI Implementation Details
@@ -144,13 +124,12 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **Layout**: 7-day vertical axis × time horizontal axis grid
 - **Scrolling**: Single LazyRow for synchronized horizontal scrolling across all days
 - **Components**: Fixed day labels (60dp width) + scrollable time slots
-- **SignalItem Cards**: Fixed 120dp width, 80dp height, 10-character name truncation
+- **SignalItem Cards**: Fixed 120dp width, 80dp height, color-coded, 10-character name truncation
 - **Time Display**: 24-hour format (HH:MM)
-- **Empty Slots**: Compact 20dp width for time periods without SignalItems
 - **Multiple Time Slots**: Same SignalItem appears in multiple time/day combinations as configured
 
 ### Scroll Synchronization Architecture
-**Critical Implementation Note**: Compose Multiplatform has limitations with multiple LazyRows inside LazyColumn - only the last LazyRow becomes scrollable. The solution uses:
+**Critical Implementation Note**: Uses single LazyRow structure to avoid Compose Multiplatform scrolling limitations:
 
 1. **Single LazyRow Structure**: One horizontal scrolling container for all time slots
 2. **TimeSlotColumn Pattern**: Each time slot contains a vertical column with 7 day cells
@@ -159,152 +138,90 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 ### Key Design Patterns
 - **Time Slot Generation**: Dynamic time slots based on actual SignalItem times (15-30min intervals)
-- **Data Organization**: Items grouped by time, then distributed across days, with multiple appearances per SignalItem
+- **Data Organization**: Items grouped by time, then distributed across days
 - **Text Truncation**: `getTruncatedName(10)` with "..." for longer names
-- **Material 3 Theming**: Primary container colors for SignalItems, outline colors for dividers
+- **Material 3 Theming**: Color-coded SignalItems with custom colors
+- **Color Picker**: UI component for selecting custom SignalItem colors
 
-### Multiple Time Slot Architecture
-- **SignalItem Structure**: Each SignalItem contains `List<TimeSlot>` instead of single time/day
-- **TimeSlot Data Class**: Individual combination of hour, minute, and dayOfWeek with unique ID
-- **UI Rendering**: TimeSlotColumn searches for SignalItems matching specific time/day combinations
-- **CRUD Operations**: Add, edit, delete individual time slots within a SignalItem
+## Alarm/Notification System
+
+### Android Implementation
+- **System Integration**: Uses Android AlarmManager for weekly recurring alarms
+- **Notification Channels**: Creates dedicated notification channels for alarms
+- **Permission Handling**: Manages exact alarm permissions (Android 12+) and notification permissions
+- **Database Persistence**: Stores alarm state in Room database with AlarmStateEntity
+- **Broadcast Receivers**: AlarmReceiver for handling alarm events, BootReceiver for alarm restoration
+
+### Desktop Implementation
+- **Mock Implementation**: DesktopAlarmManager provides interface compatibility without actual alarms
+- **Development Support**: Allows UI testing without system alarm dependencies
+
+### Key Features
+- **Weekly Recurring Alarms**: Schedules alarms for each TimeSlot in a SignalItem
+- **Batch Operations**: Schedule/cancel/update alarms for entire SignalItems
+- **Permission Management**: Handles Android notification and exact alarm permissions
+- **Alarm State Tracking**: Persists alarm scheduling state in database
+- **Sound and Vibration**: Configurable alarm behavior per SignalItem
+
+## Database Architecture
+
+### Current Status: ✅ FULLY IMPLEMENTED
+- **Database Integration**: Complete Room database implementation with cross-platform support
+- **Data Persistence**: All SignalItems, TimeSlots, and AlarmStates persist across app restarts
+- **Platform Storage**: 
+  - Desktop: `${TEMP_DIR}/weekly_signal.db` (e.g., `/tmp/weekly_signal.db`)
+  - Android: `/data/data/net.mercuryksm/databases/weekly_signal.db`
+
+### Database Schema
+- **signals**: Main SignalItem data (id, name, description, sound, vibration, color)
+- **time_slots**: TimeSlot data with foreign key to signals table
+- **alarm_states**: Alarm scheduling state with timestamps and request codes
+
+### Key Architecture Points
+1. **Repository Pattern**: SignalRepository manages all database operations with reactive StateFlow
+2. **Platform-Specific Services**: DatabaseServiceFactory creates appropriate database service per platform
+3. **Fallback Behavior**: Loads sample data only when database is empty (first run)
+4. **Type-Safe Operations**: Room DAO interfaces with compile-time SQL validation
 
 ## Development Notes
 
-- Uses Compose Hot Reload for faster development iteration
-- Targets Android API 24+ and JVM 11+
-- Material 3 design system implementation
-- Resource management through Compose Resources
-- Lifecycle-aware ViewModels for state management
-- **Code Standards**: All comments and test data should be written in English
-- **Sample Data**: Test data uses English names and descriptions for better international readability
-- **Navigation Flow**: WeeklySignalView → SignalRegistrationScreen (create) or SignalEditScreen (edit) → back to WeeklySignalView
-
-## Testing and Validation
-
-### Desktop Development
-```bash
-# Fast compilation check (desktop only)
-./gradlew :composeApp:compileKotlinDesktop
-```
-
-### Common Issues and Solutions
-- **Scroll Sync Problems**: Ensure single LazyRow architecture, avoid nested scrollable components
-- **Build Issues**: Android SDK not configured in current environment - ALWAYS use desktop-only builds for verification
-- **Performance**: Use `remember` for expensive calculations, avoid recreating TimeSlots unnecessarily
-- **Nested Scrolling Issues**: Use regular `Column` instead of `LazyColumn` when inside scrollable containers to avoid infinite height constraints
-- **Legacy Components**: `DayColumn.kt` and `TimelineHeader.kt` were removed as they conflicted with the new multiple time slot architecture
-
-### Environment Constraints
-- **Android SDK**: Not available in current development environment
+- **Environment Constraints**: Android SDK not available in current development environment
 - **Recommended Workflow**: Use `./gradlew :composeApp:compileKotlinDesktop` for all verification and development
 - **Testing Strategy**: Focus on desktop platform for UI development and validation
-- **Room Database**: Works on both platforms but development/testing should use desktop compilation
-- **KSP Compatibility**: May show warnings about version compatibility but compilation succeeds
+- **Code Standards**: All comments and test data written in English
+- **Hot Reload**: Uses Compose Hot Reload for faster development iteration
+- **Targets**: Android API 24+ and JVM 11+
 
-## Features Implemented
+### Common Issues and Solutions
+- **Build Issues**: Always use desktop-only builds for verification when Android SDK not configured
+- **Scroll Sync Problems**: Ensure single LazyRow architecture, avoid nested scrollable components
+- **Performance**: Use `remember` for expensive calculations, avoid recreating TimeSlots unnecessarily
+- **Nested Scrolling**: Use regular `Column` instead of `LazyColumn` when inside scrollable containers
 
-### Core Functionality
-- **Multiple Time Slots per SignalItem**: Each SignalItem can have multiple day/time combinations
-- **Interactive Time Slot Management**: Add, edit, and delete time slots through intuitive UI
-- **Weekly Grid Display**: Shows all SignalItems across their configured time slots
-- **Click-to-Edit**: Tap SignalItems in the weekly view to open edit screen
-- **Database Architecture Ready**: Complete Room database implementation for both Android and Desktop platforms
-- **Cross-Platform Database Service**: Unified database operations with platform-specific file storage
-- **⚠️ Database Integration**: Currently operates on sample data - database service requires initialization (see "Current Implementation Issues")
+## Key Implementation Insights
 
-### User Interface
-- **TimeSlot Display Format**: "Wed 12:00" format for easy readability
-- **Time/Day Selection Dialog**: Material 3 TimePicker with day selection radio buttons
-- **Dynamic Time Slot List**: Shows configured time slots with delete option
-- **Form Validation**: Requires at least one time slot and signal name
+### Technical Decisions
+1. **Single LazyRow Architecture**: Solves Compose Multiplatform nested scrolling limitations
+2. **Color-Coded SignalItems**: Each SignalItem has configurable color for visual distinction
+3. **Repository Pattern**: Centralized data management with reactive state updates
+4. **Platform-Specific Database Services**: Unified interface with platform-appropriate implementations
+5. **Alarm State Persistence**: Tracks alarm scheduling state in database for reliability
+6. **Batch Alarm Operations**: Efficiently manage multiple alarms per SignalItem
 
-### Data Model
-- **Flexible TimeSlot Structure**: Independent time/day combinations with unique IDs
-- **Immutable Updates**: Uses copy() pattern for state updates
-- **Repository Pattern**: Centralized data management with reactive state
-- **Sample Data**: Demonstrates various scheduling patterns (daily, specific days, different times)
-- **Room Entities**: Database entities with proper annotations, constraints, and foreign key relationships
-- **Type-Safe Database Operations**: Room DAO interfaces with compile-time SQL validation
-
-### Sample Scheduling Patterns
+### Sample Data Patterns
 - **Morning Meeting**: Monday, Wednesday, Friday at 9:00 AM
 - **Lunch Break**: Monday through Friday at 12:30 PM
 - **Project Review**: Wednesday at 3:00 PM only
 - **Exercise Time**: Tuesday/Thursday at 6:30 PM, Saturday at 7:00 PM
 
-## Database Operations Documentation
+## Navigation Flow
+- **Main View**: WeeklySignalView displays all SignalItems in weekly grid
+- **Add Flow**: FloatingActionButton → SignalRegistrationScreen → back to main view
+- **Edit Flow**: Click SignalItem → SignalEditScreen → back to main view
+- **Alarm Management**: Automatic alarm scheduling/cancellation on SignalItem CRUD operations
 
-For comprehensive database operations documentation, see `docs/db.md` which covers:
-
-### Screen-Specific Database Operations
-- **WeeklySignalView**: Read operations (display all SignalItems, filter by day)
-  - `WeeklySignalView.kt:43-44` → `viewModel.getAllSignalItems()` → Repository → Database
-- **SignalRegistrationScreen**: Create operations (save new SignalItems)
-  - `SignalRegistrationScreen.kt:97` → `onSignalSaved()` → ViewModel → Repository → Database INSERT
-- **SignalEditScreen**: Update/Delete operations (modify existing SignalItems)
-  - `SignalEditScreen.kt:26` → `viewModel.getSignalItemById()` → Repository → Database SELECT
-  - Update flow: ViewModel → Repository → Database UPDATE
-
-### Complete Database Operation Chain
-```
-UI Screen Action → Navigation/Callback → ViewModel Method → Repository Method → 
-Database Service → Platform-Specific Service → Database Repository → Room DAO → SQLite
-```
-
-### Platform Storage Locations
-- **Desktop**: `${TEMP_DIR}/weekly_signal.db` (e.g., `/tmp/weekly_signal.db`)
-- **Android**: `/data/data/net.mercuryksm/databases/weekly_signal.db`
-
-## Current Implementation Status
-
-### ✅ Database Integration Complete
-
-**Status**: **RESOLVED** ✅ (as of 2025-01-03)  
-**Priority**: All critical issues resolved
-
-The database service integration has been **successfully implemented**. All SignalItems now persist to the SQLite database across app restarts.
-
-#### ✅ Resolved Implementation
-1. **WeeklySignalViewModel.kt:12**: ✅ Now requires `SignalRepository` parameter injection
-2. **App.kt:21-22**: ✅ Initializes database service and passes to repository
-3. **main.kt:12-13** (Desktop): ✅ Creates `DatabaseServiceFactory().createSignalDatabaseService()`
-4. **MainActivity.kt:17-18** (Android): ✅ Creates database service with Context
-5. **UI Integration**: ✅ All screens properly receive ViewModel with database service
-
-#### Current Functionality
-- ✅ **Database Persistence**: SignalItems persist to SQLite database
-- ✅ **Cross-Platform**: Works on Desktop (`/tmp/weekly_signal.db`) and Android
-- ✅ **Data Survival**: Data survives app restarts
-- ✅ **CRUD Operations**: Create, Read, Update, Delete all work with database
-- ✅ **Platform Storage**: Proper file locations for each platform
-
-### 🔧 Minor Issues & Optimizations
-
-For detailed tracking of remaining minor issues and future enhancements, see **[docs/implementation-todos.md](docs/implementation-todos.md)**.
-
-#### Current Minor Issues
-1. **Database Index Warning** (Medium Priority)
-   - KSP warns about missing index on `signalId` foreign key
-   - Does not affect functionality, only query performance
-   - Solution: Add `indices = [Index(value = ["signalId"])]` to TimeSlotEntity
-
-2. **Runtime Testing** (High Priority)
-   - Database integration needs verification testing
-   - Test data persistence across app restarts
-   - Verify cross-platform consistency
-
-#### Sample Data Behavior
-- Sample data only loads when database is empty (first app launch)
-- Existing database data takes precedence over sample data
-- Sample data demonstrates all application features during development
-
-## Implementation Insights
-
-### Key Technical Decisions
-1. **Regular Column over LazyColumn**: Avoided nested scrolling issues in TimeSlotEditor
-2. **UITimeSlot vs TimeSlot**: Separate data classes to avoid naming conflicts between UI and data models
-3. **Removal of Legacy Components**: Cleaned up outdated DayColumn and TimelineHeader files
-4. **Material 3 Integration**: Full adoption of Material 3 components and theming
-5. **Database Service Separation**: Platform-agnostic database operations with expect/actual pattern
-6. **Repository Pattern**: Centralized data management with fallback to sample data when database unavailable
+## Testing Architecture
+- **Unit Tests**: EntityMappers, data model validation
+- **Mock Services**: MockDatabaseRepository for testing without database
+- **Platform Testing**: Desktop-focused testing due to environment constraints
+- **Integration Tests**: Room database operations with in-memory database
