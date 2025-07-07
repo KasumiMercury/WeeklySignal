@@ -77,7 +77,7 @@ class AndroidSignalAlarmManager(
     }
 
     init {
-        createNotificationChannel(sound = true, vibration = true)
+        createNotificationChannel()
     }
 
     // Data class for persisting alarm information
@@ -197,9 +197,7 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
-                val channelId = createNotificationChannel(settings.sound, settings.vibration)
-
-                val notification = NotificationCompat.Builder(context, channelId)
+                val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
                     .setContentText(settings.message)
@@ -210,9 +208,13 @@ class AndroidSignalAlarmManager(
                         if (settings.sound) {
                             val alarmUri = getAlarmSoundUri()
                             setSound(alarmUri)
+                        } else {
+                            setSound(null)
                         }
                         if (settings.vibration) {
                             setVibrate(VIBRATION_PATTERN)
+                        } else {
+                            setVibrate(null)
                         }
                     }
                     .build()
@@ -554,50 +556,32 @@ class AndroidSignalAlarmManager(
         }
     }
 
-    private fun createNotificationChannel(sound: Boolean, vibration: Boolean): String {
-        val channelId = "${CHANNEL_ID_BASE}_${if (sound) "s" else "n"}_${if (vibration) "v" else "n"}"
-
-        // Android 8.0+ (API 26+): Notification channels are required
-        // Since our minSdk is 24, we need to check for API 26+
+    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
-
-            val existingChannel = notificationManager.getNotificationChannel(channelId)
-            if (existingChannel != null) {
-                return channelId
-            }
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
-            val channel = NotificationChannel(
-                channelId,
-                CHANNEL_NAME,
-                AndroidNotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = CHANNEL_DESCRIPTION
-                enableLights(true)
-                enableVibration(vibration)
-
-                if (sound) {
-                    val alarmUri = getAlarmSoundUri()
-                    setSound(alarmUri, audioAttributes)
-                } else {
-                    setSound(null, null)
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
+            val channelId = CHANNEL_ID_BASE // Use fixed channel ID
+            
+            if (notificationManager.getNotificationChannel(channelId) == null) {
+                val channel = NotificationChannel(
+                    channelId,
+                    CHANNEL_NAME,
+                    AndroidNotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = CHANNEL_DESCRIPTION
+                    enableLights(true)
+                    enableVibration(true)
+                    vibrationPattern = VIBRATION_PATTERN
+                    
+                    // Set default sound and audio attributes
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    setSound(getAlarmSoundUri(), audioAttributes)
                 }
-
-                if (vibration) {
-                    this.vibrationPattern = VIBRATION_PATTERN
-                }
+                notificationManager.createNotificationChannel(channel)
             }
-
-            notificationManager.createNotificationChannel(channel)
         }
-
-        return channelId
     }
 
     private fun getAlarmSoundUri(): Uri {
