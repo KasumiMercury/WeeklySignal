@@ -19,38 +19,38 @@
 
 ## 3. アラーム関連実装
 
-### 3.1. 通知チャネル設計の改善 (推奨)
+### 3.1. 通知チャネル設計の改善 (対応済み)
 
 **現状:**
-`AndroidAlarmManager.kt` の `createNotificationChannel` メソッドは、サウンドとバイブレーションの有無に応じて、動的に異なるIDを持つ通知チャネルを生成しています。
+`AndroidAlarmManager.kt` の `createNotificationChannel` メソッドは、サウンドとバイブレーションの有無に応じて、動的に異なるIDを持つ通知チャネルを生成していましたが、**現在は単一のチャネルID (`weekly_signal_alarms`) を使用するように修正済みです。**
 
 ```kotlin
 // AndroidAlarmManager.kt
-private fun createNotificationChannel(sound: Boolean, vibration: Boolean): String {
-    val channelId = "${CHANNEL_ID_BASE}_${if (sound) "s" else "n"}_${if (vibration) "v" else "n"}"
+private fun createNotificationChannel() { // 引数なしに変更
+    val channelId = CHANNEL_ID_BASE // 固定のチャネルIDを使用
     // ...
 }
 ```
 
 **課題:**
-この実装では、ユーザーがOSの「設定」アプリから「WeeklySignalのアラーム」という単一のカテゴリに対して通知音やバイブレーションのON/OFFをまとめて管理することができません。ユーザー体験の観点から、改善の余地があります。
+この実装では、ユーザーがOSの「設定」アプリから「WeeklySignalのアラーム」という単一のカテゴリに対して通知音やバイブレーションのON/OFFをまとめて管理することができませんでした。
 
-**提案:**
-通知チャネルを単一（ID: `weekly_signal_alarms`）に統一し、チャネル作成時にはデフォルトのサウンドとバイブレーションを設定します。そして、個々のアラーム通知を生成する `AlarmReceiver.kt` 内で、設定に応じて `setSound(null)` や `setVibrate(null)` を呼び出し、動的に音や振動を無効化する方式に変更することを推奨します。
+**対応:**
+通知チャネルを単一（ID: `weekly_signal_alarms`）に統一し、チャネル作成時にはデフォルトのサウンドとバイブレーションを設定するように変更しました。そして、個々のアラーム通知を生成する `AlarmReceiver.kt` 内で、設定に応じて `setSound(null)` や `setVibrate(null)` を呼び出し、動的に音や振動を無効化する方式に変更済みです。
 
 **期待される効果:**
-ユーザーはAndroid標準の通知設定画面から、アプリの通知スタイルを一元的に、かつ直感的にカスタマイズできるようになります。
+ユーザーはAndroid標準の通知設定画面から、アプリの通知スタイルを一元的に、かつ直感的にカスタマイズできるようになりました。
 
-### 3.2. AlarmReceiverの堅牢性向上
+### 3.2. AlarmReceiverの堅牢性向上 (対応済み)
 
 **現状:**
-`AlarmReceiver.kt` の `onReceive` メソッドは、アクションに応じて処理を分岐させています。
+`AlarmReceiver.kt` の `onReceive` メソッドは、アクションに応じて処理を分岐させていましたが、予期せぬ例外発生時にレシーバーがクラッシュする可能性がありました。
 
-**提案:**
-`onReceive` の処理全体を `try-catch (e: Exception)` ブロックで囲むことで、予期せぬ例外（例: `Intent` のExtraデータが破損しているなど）が発生してもレシーバーがクラッシュし、後続のアラーム処理に影響を与えるのを防ぐことができます。
+**対応:**
+`onReceive` の処理全体を `try-catch (e: Exception)` ブロックで囲むことで、予期せぬ例外（例: `Intent` のExtraデータが破損しているなど）が発生してもレシーバーがクラッシュし、後続のアラーム処理に影響を与えるのを防ぐように修正しました。エラーはログに記録されます。
 
 ```kotlin
-// AlarmReceiver.kt の修正案
+// AlarmReceiver.kt の修正済みコード
 override fun onReceive(context: Context, intent: Intent) {
     try {
         when (intent.action) {
