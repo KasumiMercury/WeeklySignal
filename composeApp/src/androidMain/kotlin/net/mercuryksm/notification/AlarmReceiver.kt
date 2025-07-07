@@ -12,9 +12,12 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.media.RingtoneManager
+import android.media.Ringtone
+import androidx.annotation.RequiresApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import java.util.Calendar
+import java.util.concurrent.ConcurrentHashMap
 
 class AlarmReceiver : BroadcastReceiver() {
     
@@ -22,17 +25,30 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val CHANNEL_ID = "weekly_signal_alarms"
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
+        
+        // Static management of Ringtone objects for alarm sound control
+        private val activeRingtones = ConcurrentHashMap<String, Ringtone>()
     }
     
     private val json = Json { ignoreUnknownKeys = true }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            DISMISS_ACTION -> handleDismiss(context, intent)
-            else -> handleAlarm(context, intent)
+        try {
+            when (intent.action) {
+                DISMISS_ACTION -> handleDismiss(context, intent)
+                else -> handleAlarm(context, intent)
+            }
+        } catch (e: Exception) {
+            // Log the error to prevent receiver from crashing
+            e.printStackTrace()
+        } finally {
+            // Clean up finished ringtones to prevent memory leaks
+            cleanupFinishedRingtones()
         }
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun handleAlarm(context: Context, intent: Intent) {
         val alarmInfoJson = intent.getStringExtra(AndroidSignalAlarmManager.EXTRA_ALARM_INFO) ?: return
         val isRepeating = intent.getBooleanExtra(AndroidSignalAlarmManager.EXTRA_IS_REPEATING, false)
@@ -54,6 +70,7 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun showAlarmNotification(
         context: Context,
         alarmInfo: AndroidSignalAlarmManager.AlarmInfo
@@ -69,10 +86,22 @@ class AlarmReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
-            .setFullScreenIntent(createFullScreenIntent(context, alarmInfo.alarmId), true)
+            .setContentIntent(createMainActivityIntent(context))
             .apply {
                 if (alarmInfo.sound) {
-                    setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+                    // Use channel default sound
+                    // Start playing alarm sound and manage it for potential stopping
+                    playAndManageAlarmSound(context, alarmInfo.alarmId)
+                } else {
+                    // Disable sound for this notification
+                    setSound(null)
+                }
+                
+                if (alarmInfo.vibration) {
+                    // Use channel default vibration
+                } else {
+                    // Disable vibration for this notification
+                    setVibrate(null)
                 }
                 
                 // Dismiss action (no snooze per requirements)
@@ -89,7 +118,7 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.notify(notificationId, notificationBuilder.build())
         }
         
-        // Vibration
+        // Vibration - only trigger if enabled in AlarmInfo
         if (alarmInfo.vibration) {
             triggerVibration(context)
         }
@@ -160,21 +189,24 @@ class AlarmReceiver : BroadcastReceiver() {
     
     private fun handleDismiss(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notification_id", 0)
+        val alarmId = intent.getStringExtra("alarm_id") ?: ""
+        
+        // Stop alarm sound if it's playing
+        stopAlarmSound(alarmId)
         
         // Clear notification
         val notificationManager = NotificationManagerCompat.from(context)
         notificationManager.cancel(notificationId)
     }
     
-    private fun createFullScreenIntent(context: Context, alarmId: String): PendingIntent {
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("alarm_id", alarmId)
-            putExtra("action", "full_screen")
+    private fun createMainActivityIntent(context: Context): PendingIntent {
+        val intent = Intent(context, net.mercuryksm.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         
-        return PendingIntent.getBroadcast(
+        return PendingIntent.getActivity(
             context,
-            "${alarmId}_fullscreen".hashCode(),
+            0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -195,6 +227,7 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun triggerVibration(context: Context) {
         try {
             val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
@@ -212,6 +245,61 @@ class AlarmReceiver : BroadcastReceiver() {
             }
         } catch (e: Exception) {
             // Vibration failed, ignore
+        }
+    }
+    
+    private fun playAndManageAlarmSound(context: Context, alarmId: String) {
+        try {
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: return
+            
+            val ringtone = RingtoneManager.getRingtone(context, alarmUri)
+            if (ringtone != null) {
+                activeRingtones[alarmId] = ringtone
+                ringtone.play()
+            }
+        } catch (e: Exception) {
+            // Failed to play alarm sound, ignore
+        }
+    }
+    
+    private fun stopAlarmSound(alarmId: String) {
+        try {
+            val ringtone = activeRingtones.remove(alarmId)
+            if (ringtone?.isPlaying == true) {
+                ringtone.stop()
+            }
+        } catch (e: Exception) {
+            // Failed to stop alarm sound, ignore
+        }
+    }
+    
+    private fun stopAllAlarmSounds() {
+        try {
+            activeRingtones.values.forEach { ringtone ->
+                if (ringtone.isPlaying) {
+                    ringtone.stop()
+                }
+            }
+            activeRingtones.clear()
+        } catch (e: Exception) {
+            // Failed to stop all alarm sounds, ignore
+        }
+    }
+    
+    private fun cleanupFinishedRingtones() {
+        try {
+            val iterator = activeRingtones.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                val ringtone = entry.value
+                if (!ringtone.isPlaying) {
+                    iterator.remove()
+                }
+            }
+        } catch (e: Exception) {
+            // Failed to cleanup ringtones, ignore
         }
     }
 }

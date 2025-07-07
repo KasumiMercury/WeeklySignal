@@ -94,4 +94,77 @@ class DesktopSignalDatabaseService(
             Result.failure(e)
         }
     }
+    
+    // Alarm state management methods
+    override suspend fun saveAlarmState(alarmState: AlarmStateEntity): Result<Unit> {
+        return try {
+            databaseRepository.insertOrUpdateAlarmState(alarmState)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun getAlarmStateByTimeSlotId(timeSlotId: String): Result<AlarmStateEntity?> {
+        return try {
+            val alarmState = databaseRepository.getAlarmStateByTimeSlotId(timeSlotId)
+            Result.success(alarmState)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun getAlarmStatesBySignalItemId(signalItemId: String): Result<List<AlarmStateEntity>> {
+        return try {
+            val alarmStates = databaseRepository.getAlarmStatesBySignalItemId(signalItemId)
+            Result.success(alarmStates)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun getAllScheduledAlarmStates(): Result<List<AlarmStateEntity>> {
+        return try {
+            val alarmStates = databaseRepository.getAllScheduledAlarmStates()
+            Result.success(alarmStates)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun deleteAlarmState(timeSlotId: String): Result<Unit> {
+        return try {
+            databaseRepository.deleteAlarmState(timeSlotId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String): Result<Unit> {
+        return try {
+            databaseRepository.deleteAlarmStatesBySignalItemId(signalItemId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean): Result<Unit> {
+        return try {
+            databaseRepository.updateAlarmScheduledStatus(timeSlotId, isScheduled)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long): Result<Unit> {
+        return try {
+            databaseRepository.updateAlarmNextTime(timeSlotId, nextAlarmTime)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
