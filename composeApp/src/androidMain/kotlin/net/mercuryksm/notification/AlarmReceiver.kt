@@ -32,6 +32,7 @@ class AlarmReceiver : BroadcastReceiver() {
     
     private val json = Json { ignoreUnknownKeys = true }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             DISMISS_ACTION -> handleDismiss(context, intent)
@@ -42,6 +43,7 @@ class AlarmReceiver : BroadcastReceiver() {
         cleanupFinishedRingtones()
     }
     
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun handleAlarm(context: Context, intent: Intent) {
         val alarmInfoJson = intent.getStringExtra(AndroidSignalAlarmManager.EXTRA_ALARM_INFO) ?: return
         val isRepeating = intent.getBooleanExtra(AndroidSignalAlarmManager.EXTRA_IS_REPEATING, false)
