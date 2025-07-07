@@ -1,13 +1,15 @@
 package net.mercuryksm.notification
 
 import android.content.Context
+import net.mercuryksm.data.database.DatabaseServiceFactory
 
 class AndroidAlarmServiceFactory(
     private val context: Context
 ) : AlarmServiceFactory {
     
     override fun createAlarmManager(): SignalAlarmManager {
-        return AndroidSignalAlarmManager(context)
+        val databaseService = DatabaseServiceFactory(context).createSignalDatabaseService()
+        return AndroidSignalAlarmManager(context, databaseService)
     }
 }
 

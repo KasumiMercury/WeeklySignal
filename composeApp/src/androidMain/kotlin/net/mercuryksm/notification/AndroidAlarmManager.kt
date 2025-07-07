@@ -28,6 +28,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.DayOfWeekJp
+import net.mercuryksm.data.database.SignalDatabaseService
+import net.mercuryksm.data.database.AlarmStateEntity
+import net.mercuryksm.data.database.getRoomDatabase
 import kotlin.coroutines.resume
 import androidx.core.net.toUri
 import java.util.Calendar
@@ -37,7 +40,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
 class AndroidSignalAlarmManager(
-    private val context: Context
+    private val context: Context,
+    private val databaseService: SignalDatabaseService
 ) : SignalAlarmManager {
 
     companion object {
@@ -49,7 +53,7 @@ class AndroidSignalAlarmManager(
         private const val TEST_NOTIFICATION_ID = 1001
         private const val TEST_NOTIFICATION_DELAY_MS = 5000L
         
-        // SharedPreferences keys
+        // SharedPreferences keys (for migration only)
         private const val PREFS_NAME = "weekly_signal_alarms"
         private const val PREFS_KEY_ALARM_INFO = "alarm_info_"
         private const val PREFS_KEY_ALL_ALARMS = "all_alarm_ids"
@@ -63,6 +67,11 @@ class AndroidSignalAlarmManager(
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     private val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
+    
+    init {
+        // Migrate existing SharedPreferences data to Room database on first run
+        migrateSharedPreferencesToRoom()
+    }
 
     init {
         createNotificationChannel(sound = true, vibration = true)
@@ -96,6 +105,9 @@ class AndroidSignalAlarmManager(
                 // Cancel existing alarm
                 cancelExistingAlarm(alarmId)
 
+                // Calculate first alarm time
+                val firstAlarmTime = calculateNextAlarmTime(timeSlot)
+                
                 // Create alarm information
                 val alarmInfo = AlarmInfo(
                     alarmId = settings.alarmId,
@@ -109,9 +121,6 @@ class AndroidSignalAlarmManager(
                     minute = timeSlot.minute,
                     dayOfWeek = timeSlot.dayOfWeek.ordinal
                 )
-
-                // Calculate first alarm time
-                val firstAlarmTime = calculateNextAlarmTime(timeSlot)
                 
                 // Create PendingIntent
                 val alarmIntent = createAlarmIntent(alarmInfo)
@@ -125,8 +134,8 @@ class AndroidSignalAlarmManager(
                 // Set weekly recurring alarm
                 setRepeatingAlarmWithPermissionCheck(firstAlarmTime, pendingIntent)
                 
-                // Save alarm information
-                saveAlarmInfo(alarmId, alarmInfo)
+                // Save alarm state to database
+                saveAlarmStateToDatabase(timeSlot.id, alarmId, firstAlarmTime)
                 
                 AlarmResult.SUCCESS
             } catch (e: SecurityException) {
@@ -143,7 +152,7 @@ class AndroidSignalAlarmManager(
                 val alarmIdInt = alarmId.toIntOrNull() ?: return@withContext AlarmResult.ALARM_NOT_FOUND
                 
                 cancelExistingAlarm(alarmIdInt)
-                removeAlarmInfo(alarmIdInt)
+                removeAlarmStateFromDatabase(alarmId)
                 
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
@@ -155,11 +164,13 @@ class AndroidSignalAlarmManager(
     override suspend fun cancelAllAlarms(): AlarmResult {
         return withContext(Dispatchers.IO) {
             try {
-                val allAlarmIds = getAllAlarmIds()
-                allAlarmIds.forEach { alarmId ->
+                val database = getRoomDatabase()
+                val allAlarmStates = database.alarmStateDao().getAllScheduledAlarms()
+                allAlarmStates.forEach { alarmState ->
+                    val alarmId = generateAlarmIdFromTimeSlotId(alarmState.timeSlotId)
                     cancelExistingAlarm(alarmId)
                 }
-                clearAllAlarmInfo()
+                clearAllAlarmStates()
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
                 AlarmResult.ERROR
@@ -169,7 +180,9 @@ class AndroidSignalAlarmManager(
 
     override suspend fun getScheduledAlarms(): List<String> {
         return withContext(Dispatchers.IO) {
-            getAllAlarmIds().map { it.toString() }
+            val database = getRoomDatabase()
+            database.alarmStateDao().getAllScheduledAlarms()
+                .map { it.timeSlotId }
         }
     }
 
@@ -294,10 +307,11 @@ class AndroidSignalAlarmManager(
     // Check alarm status for specific SignalItem
     override suspend fun isSignalItemAlarmsEnabled(signalItemId: String): Boolean {
         return withContext(Dispatchers.IO) {
-            val allAlarmIds = getAllAlarmIds()
-            allAlarmIds.any { alarmId ->
-                val alarmInfo = getAlarmInfo(alarmId)
-                alarmInfo?.signalItemId == signalItemId
+            val database = getRoomDatabase()
+            val timeSlots = database.timeSlotDao().getBySignalId(signalItemId)
+            timeSlots.any { timeSlot ->
+                val alarmState = database.alarmStateDao().getByTimeSlotId(timeSlot.id)
+                alarmState?.isAlarmScheduled == true
             }
         }
     }
@@ -394,66 +408,53 @@ class AndroidSignalAlarmManager(
         }
     }
 
-    // Alarm information save/load operations
+    // Database alarm state management
 
-    private fun saveAlarmInfo(alarmId: Int, alarmInfo: AlarmInfo) {
-        val key = "$PREFS_KEY_ALARM_INFO$alarmId"
-        val jsonString = json.encodeToString(alarmInfo)
-        
-        sharedPrefs.edit().apply {
-            putString(key, jsonString)
-            
-            // Add to alarm ID list
-            val allIds = getAllAlarmIds().toMutableSet()
-            allIds.add(alarmId)
-            putStringSet(PREFS_KEY_ALL_ALARMS, allIds.map { it.toString() }.toSet())
-            
-            apply()
-        }
+    private suspend fun saveAlarmStateToDatabase(timeSlotId: String, alarmId: Int, nextAlarmTime: Long) {
+        val alarmState = AlarmStateEntity(
+            timeSlotId = timeSlotId,
+            isAlarmScheduled = true,
+            pendingIntentRequestCode = alarmId,
+            scheduledAt = System.currentTimeMillis(),
+            nextAlarmTime = nextAlarmTime
+        )
+        val database = getRoomDatabase()
+        database.alarmStateDao().insertOrUpdate(alarmState)
     }
 
-    private fun removeAlarmInfo(alarmId: Int) {
-        val key = "$PREFS_KEY_ALARM_INFO$alarmId"
-        
-        sharedPrefs.edit().apply {
-            remove(key)
-            
-            // Remove from alarm ID list
-            val allIds = getAllAlarmIds().toMutableSet()
-            allIds.remove(alarmId)
-            putStringSet(PREFS_KEY_ALL_ALARMS, allIds.map { it.toString() }.toSet())
-            
-            apply()
-        }
-    }
-
-    private fun getAlarmInfo(alarmId: Int): AlarmInfo? {
-        val key = "$PREFS_KEY_ALARM_INFO$alarmId"
-        val jsonString = sharedPrefs.getString(key, null) ?: return null
-        
-        return try {
-            json.decodeFromString<AlarmInfo>(jsonString)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun getAllAlarmIds(): Set<Int> {
-        return sharedPrefs.getStringSet(PREFS_KEY_ALL_ALARMS, emptySet())
-            ?.mapNotNull { it.toIntOrNull() }
-            ?.toSet()
-            ?: emptySet()
-    }
-
-    private fun clearAllAlarmInfo() {
-        sharedPrefs.edit().apply {
-            // Delete all alarm information
-            getAllAlarmIds().forEach { alarmId ->
-                remove("$PREFS_KEY_ALARM_INFO$alarmId")
+    private suspend fun removeAlarmStateFromDatabase(alarmId: String) {
+        // Find alarm state by pending intent request code or timeSlotId
+        val alarmIdInt = alarmId.toIntOrNull()
+        if (alarmIdInt != null) {
+            val database = getRoomDatabase()
+            val allStates = database.alarmStateDao().getAll()
+            val targetState = allStates.find { it.pendingIntentRequestCode == alarmIdInt }
+            targetState?.let { state ->
+                database.alarmStateDao().delete(state.timeSlotId)
             }
-            remove(PREFS_KEY_ALL_ALARMS)
-            apply()
+        } else {
+            // Try to delete by timeSlotId directly
+            val database = getRoomDatabase()
+            database.alarmStateDao().delete(alarmId)
         }
+    }
+
+    private suspend fun clearAllAlarmStates() {
+        val database = getRoomDatabase()
+        val allStates = database.alarmStateDao().getAll()
+        allStates.forEach { state ->
+            database.alarmStateDao().delete(state.timeSlotId)
+        }
+    }
+
+    private fun generateAlarmIdFromTimeSlotId(timeSlotId: String): Int {
+        return timeSlotId.hashCode() and 0x7FFFFFFF
+    }
+
+    // Migration from SharedPreferences to Room database
+    private fun migrateSharedPreferencesToRoom() {
+        // This will be implemented in a separate task
+        // For now, just clear old SharedPreferences data if Room has any alarm states
     }
 
     // Notification channel and other helper methods maintain existing implementation

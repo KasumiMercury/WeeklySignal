@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.data.database.DatabaseServiceFactory
+import net.mercuryksm.data.database.getRoomDatabase
 
 class BootReceiver : BroadcastReceiver() {
     
@@ -35,7 +37,8 @@ class BootReceiver : BroadcastReceiver() {
     
     private suspend fun rescheduleAllAlarms(context: Context) {
         try {
-            val alarmManager = AndroidSignalAlarmManager(context)
+            val databaseService = DatabaseServiceFactory(context).createSignalDatabaseService()
+            val alarmManager = AndroidSignalAlarmManager(context, databaseService)
             val sharedPrefs = context.getSharedPreferences("weekly_signal_alarms", Context.MODE_PRIVATE)
             
             // Get all saved alarm IDs

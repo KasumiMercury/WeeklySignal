@@ -24,7 +24,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val databaseService = DatabaseServiceFactory(this@MainActivity).createSignalDatabaseService()
             val alarmManager = AndroidSignalAlarmManager(
-                context = this@MainActivity
+                context = this@MainActivity,
+                databaseService = databaseService
             )
             App(databaseService, alarmManager)
         }
