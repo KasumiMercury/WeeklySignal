@@ -3,10 +3,16 @@ package net.mercuryksm.data.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
+import androidx.room.AutoMigration
+
 @Database(
     entities = [SignalEntity::class, TimeSlotEntity::class, AlarmStateEntity::class],
-    version = 1,
-    exportSchema = true
+    version = 4,
+    exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3)
+    ]
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun signalDao(): SignalDao
