@@ -12,10 +12,12 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.media.RingtoneManager
+import android.media.Ringtone
 import androidx.annotation.RequiresApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import java.util.Calendar
+import java.util.concurrent.ConcurrentHashMap
 
 class AlarmReceiver : BroadcastReceiver() {
     
@@ -23,6 +25,9 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val CHANNEL_ID = "weekly_signal_alarms"
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
+        
+        // Static management of Ringtone objects for alarm sound control
+        private val activeRingtones = ConcurrentHashMap<String, Ringtone>()
     }
     
     private val json = Json { ignoreUnknownKeys = true }
@@ -32,6 +37,9 @@ class AlarmReceiver : BroadcastReceiver() {
             DISMISS_ACTION -> handleDismiss(context, intent)
             else -> handleAlarm(context, intent)
         }
+        
+        // Clean up finished ringtones to prevent memory leaks
+        cleanupFinishedRingtones()
     }
     
     private fun handleAlarm(context: Context, intent: Intent) {
@@ -75,6 +83,8 @@ class AlarmReceiver : BroadcastReceiver() {
             .apply {
                 if (alarmInfo.sound) {
                     setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+                    // Start playing alarm sound and manage it for potential stopping
+                    playAndManageAlarmSound(context, alarmInfo.alarmId)
                 }
                 
                 // Dismiss action (no snooze per requirements)
@@ -162,6 +172,10 @@ class AlarmReceiver : BroadcastReceiver() {
     
     private fun handleDismiss(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notification_id", 0)
+        val alarmId = intent.getStringExtra("alarm_id") ?: ""
+        
+        // Stop alarm sound if it's playing
+        stopAlarmSound(alarmId)
         
         // Clear notification
         val notificationManager = NotificationManagerCompat.from(context)
@@ -214,6 +228,61 @@ class AlarmReceiver : BroadcastReceiver() {
             }
         } catch (e: Exception) {
             // Vibration failed, ignore
+        }
+    }
+    
+    private fun playAndManageAlarmSound(context: Context, alarmId: String) {
+        try {
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: return
+            
+            val ringtone = RingtoneManager.getRingtone(context, alarmUri)
+            if (ringtone != null) {
+                activeRingtones[alarmId] = ringtone
+                ringtone.play()
+            }
+        } catch (e: Exception) {
+            // Failed to play alarm sound, ignore
+        }
+    }
+    
+    private fun stopAlarmSound(alarmId: String) {
+        try {
+            val ringtone = activeRingtones.remove(alarmId)
+            if (ringtone?.isPlaying == true) {
+                ringtone.stop()
+            }
+        } catch (e: Exception) {
+            // Failed to stop alarm sound, ignore
+        }
+    }
+    
+    private fun stopAllAlarmSounds() {
+        try {
+            activeRingtones.values.forEach { ringtone ->
+                if (ringtone.isPlaying) {
+                    ringtone.stop()
+                }
+            }
+            activeRingtones.clear()
+        } catch (e: Exception) {
+            // Failed to stop all alarm sounds, ignore
+        }
+    }
+    
+    private fun cleanupFinishedRingtones() {
+        try {
+            val iterator = activeRingtones.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                val ringtone = entry.value
+                if (!ringtone.isPlaying) {
+                    iterator.remove()
+                }
+            }
+        } catch (e: Exception) {
+            // Failed to cleanup ringtones, ignore
         }
     }
 }
