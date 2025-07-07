@@ -58,6 +58,7 @@ kotlin {
 
 room {
     schemaDirectory("$projectDir/schemas")
+    generateKotlin = true
 }
 
 dependencies {

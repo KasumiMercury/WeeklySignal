@@ -33,4 +33,10 @@ interface AlarmStateDao {
 
     @Query("SELECT COUNT(*) FROM alarm_states WHERE isAlarmScheduled = 1")
     suspend fun getScheduledAlarmsCount(): Int
+
+    @Query("SELECT * FROM alarm_states WHERE signalItemId = :signalItemId")
+    suspend fun getAlarmStatesBySignalItemId(signalItemId: String): List<AlarmStateEntity>
+
+    @Query("SELECT * FROM alarm_states WHERE signalItemId = :signalItemId AND isAlarmScheduled = 1")
+    suspend fun getScheduledAlarmsBySignalItemId(signalItemId: String): List<AlarmStateEntity>
 }

@@ -1,5 +1,6 @@
 package net.mercuryksm.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -15,11 +16,13 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["timeSlotId"])]
+    indices = [Index(value = ["timeSlotId"]), Index(value = ["signalItemId"])]
 )
 data class AlarmStateEntity(
     @PrimaryKey
     val timeSlotId: String,
+    @ColumnInfo(defaultValue = "")
+    val signalItemId: String,
     val isAlarmScheduled: Boolean,
     val pendingIntentRequestCode: Int,
     val scheduledAt: Long,

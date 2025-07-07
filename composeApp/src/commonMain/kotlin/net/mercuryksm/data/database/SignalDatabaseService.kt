@@ -9,4 +9,14 @@ interface SignalDatabaseService {
     suspend fun getSignalItemById(signalId: String): Result<SignalItem?>
     suspend fun getAllSignalItems(): Result<List<SignalItem>>
     suspend fun clearAllData(): Result<Unit>
+    
+    // Alarm state management methods
+    suspend fun saveAlarmState(alarmState: AlarmStateEntity): Result<Unit>
+    suspend fun getAlarmStateByTimeSlotId(timeSlotId: String): Result<AlarmStateEntity?>
+    suspend fun getAlarmStatesBySignalItemId(signalItemId: String): Result<List<AlarmStateEntity>>
+    suspend fun getAllScheduledAlarmStates(): Result<List<AlarmStateEntity>>
+    suspend fun deleteAlarmState(timeSlotId: String): Result<Unit>
+    suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String): Result<Unit>
+    suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean): Result<Unit>
+    suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long): Result<Unit>
 }

@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "a4819fc4fd45acfb6a2f523ff8dde83a",
+    "version": 4,
+    "identityHash": "0d99583ad45485be0a49c132e2b5846f",
     "entities": [
       {
         "tableName": "signals",
@@ -121,7 +121,7 @@
       },
       {
         "tableName": "alarm_states",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`timeSlotId` TEXT NOT NULL, `signalItemId` TEXT NOT NULL DEFAULT '', `isAlarmScheduled` INTEGER NOT NULL, `pendingIntentRequestCode` INTEGER NOT NULL, `scheduledAt` INTEGER NOT NULL, `nextAlarmTime` INTEGER NOT NULL, PRIMARY KEY(`timeSlotId`), FOREIGN KEY(`timeSlotId`) REFERENCES `time_slots`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`timeSlotId` TEXT NOT NULL, `signalItemId` TEXT NOT NULL, `isAlarmScheduled` INTEGER NOT NULL, `pendingIntentRequestCode` INTEGER NOT NULL, `scheduledAt` INTEGER NOT NULL, `nextAlarmTime` INTEGER NOT NULL, PRIMARY KEY(`timeSlotId`), FOREIGN KEY(`timeSlotId`) REFERENCES `time_slots`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "timeSlotId",
@@ -133,8 +133,7 @@
             "fieldPath": "signalItemId",
             "columnName": "signalItemId",
             "affinity": "TEXT",
-            "notNull": true,
-            "defaultValue": "''"
+            "notNull": true
           },
           {
             "fieldPath": "isAlarmScheduled",
@@ -204,7 +203,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a4819fc4fd45acfb6a2f523ff8dde83a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0d99583ad45485be0a49c132e2b5846f')"
     ]
   }
 }

@@ -85,66 +85,42 @@ private fun createNotificationChannel(sound: Boolean, vibration: Boolean): Strin
 **期待される効果:**
 ユーザーはOSの設定画面で「Weekly Signal Alarms」という単一のチャネルに対して、好みのサウンドやバイブレーションパターン、通知のポップアップ表示などを自由にカスタマイズできるようになり、Androidプラットフォーム標準のユーザー体験を提供できます。
 
-### 2.2. データ永続化戦略をRoomに一本化する
+### 2.2. データ永続化戦略のRoomへの一本化 (対応済み)
 
-**現状の課題:**
-アラーム情報の永続化に関して、`SharedPreferences` を使用した古い実装と、Roomデータベース (`AlarmStateEntity`) を使用した新しい実装が混在しています。特に `BootReceiver.kt` は、デバイス再起動時のアラーム再設定処理を `SharedPreferences` に依存しています。
+**評価:**
+以前の実装では、アラーム情報の永続化に `SharedPreferences` とRoomデータベースが混在しており、特にデバイス再起動時の処理 (`BootReceiver`) が古い `SharedPreferences` に依存していました。
 
-```kotlin
-// BootReceiver.kt
-// SharedPreferencesから保存されたアラームIDセットを取得している
-val allAlarmIds = sharedPrefs.getStringSet("all_alarm_ids", emptySet()) ?: emptySet()
-allAlarmIds.forEach { alarmIdStr ->
-    // SharedPreferencesからアラーム情報を取得して再設定
-}
-```
+現在の実装では、この点が**完全に改善されています。**
 
-この状態は、データソースが分散しているため、管理が煩雑で、将来的に不整合を引き起こす可能性があります。
-
-**提案:**
-`SharedPreferences` への依存を完全に排除し、アラーム情報の永続化をRoomデータベースに一本化します。`BootReceiver` は、Roomに保存されている `AlarmStateEntity` の情報を基にアラームを再設定するように修正します。
-
-**具体的な実装案:**
-
-1.  **`BootReceiver.kt` の `rescheduleAllAlarms` を修正**
-    -   `SharedPreferences` の代わりに `SignalDatabaseService` (Room) を使って、保存されているすべてのアラーム状態 (`AlarmStateEntity`) を取得します。
-    -   取得したエンティティから `SignalItem` と `TimeSlot` の情報を復元し、`AndroidSignalAlarmManager` を使ってアラームを再スケジュールします。
+-   **`BootReceiver` の修正:** `BootReceiver.kt` は、Roomデータベース (`SignalDatabaseService`経由) から直接スケジュール済みのアラーム情報を取得して再設定するよう修正されました。これにより、`SharedPreferences` への依存がなくなり、データソースが一本化されました。
 
     ```kotlin
-    // BootReceiver.kt の修正案
+    // BootReceiver.kt (現在の実装)
     private suspend fun rescheduleAllAlarms(context: Context) {
-        val databaseService = DatabaseServiceFactory(context).createSignalDatabaseService()
-        val alarmManager = AndroidSignalAlarmManager(context, databaseService)
-        
-        // Room DBからスケジュール済みのアラーム状態をすべて取得
-        val scheduledAlarms = databaseService.getAllScheduledAlarmStates() // 仮のメソッド名
-        
-        for (alarmState in scheduledAlarms) {
-            // alarmStateからSignalItemとTimeSlotの情報を取得
-            val signalItem = databaseService.getSignalItemById(alarmState.signalItemId) // 仮のメソッド名
-            val timeSlot = signalItem?.timeSlots?.find { it.id == alarmState.timeSlotId }
+        try {
+            val databaseService = DatabaseServiceFactory(context).createSignalDatabaseService()
+            val alarmManager = AndroidSignalAlarmManager(context, databaseService)
             
-            if (signalItem != null && timeSlot != null) {
-                val settings = AlarmSettings(
-                    sound = signalItem.sound,
-                    vibration = signal.vibration,
-                    title = signalItem.name,
-                    message = signalItem.description,
-                    alarmId = "${signalItem.id}_${timeSlot.id}"
-                )
-                // アラームを再スケジュール
-                alarmManager.scheduleAlarm(timeSlot, settings)
+            // Roomデータベースからすべてのアラーム状態を取得
+            val scheduledAlarmsResult = databaseService.getAllScheduledAlarmStates()
+            
+            if (scheduledAlarmsResult.isSuccess) {
+                val scheduledAlarms = scheduledAlarmsResult.getOrNull() ?: emptyList()
+                
+                scheduledAlarms.forEach { alarmState ->
+                    // ... アラームを再スケジュールするロジック ...
+                }
             }
-        }
+        } // ...
     }
     ```
-    *注: 上記コードは概念的なものであり、`AlarmStateEntity` に `signalItemId` を含めるなど、エンティティの設計見直しが必要になる場合があります。*
 
-2.  **`AndroidSignalAlarmManager.kt` から `SharedPreferences` 関連コードを削除**
-    -   `sharedPrefs` プロパティと、`migrateSharedPreferencesToRoom` メソッド、関連する定数を削除します。
+-   **堅牢なデータ移行:** `AndroidSignalAlarmManager.kt` には、`SharedPreferences` に残っている古いデータを一度だけRoomデータベースに移行するための `migrateSharedPreferencesToRoom` メソッドが実装されています。移行完了後は古いデータを削除する処理も含まれており、非常に堅牢な設計です。
 
-**期待される効果:**
-データ永続化の方法がRoomに統一されることで、データの一貫性が保証され、コードの可読性とメンテナンス性が大幅に向上します。トランザクション管理も容易になり、より堅牢なシステムを構築できます。
+-   **一貫性の確保:** `AlarmStateEntity` に `signalItemId` が追加されたことで、データ構造がより明確になり、アラームと `SignalItem` の関連性が保証されるようになりました。
+
+**結論:**
+データ永続化戦略は、当初の提案通りRoomデータベースに完全に一本化されました。これにより、アプリケーションの信頼性とメンテナンス性が大幅に向上したと評価します。
 
 ## 3. その他の評価
 
