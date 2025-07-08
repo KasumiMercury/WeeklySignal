@@ -19,6 +19,7 @@ import net.mercuryksm.notification.AlarmResult
 import net.mercuryksm.notification.NotificationPermissionDialog
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createTestAlarmSettings
+import net.mercuryksm.notification.rememberPermissionHelper
 import net.mercuryksm.ui.ColorPicker
 import net.mercuryksm.ui.WeeklySignalViewModel
 
@@ -54,6 +55,14 @@ fun SignalEditScreen(
     
     val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
+    val permissionHelper = rememberPermissionHelper()
+    
+    // Setup permission helper with alarm manager if both are available
+    LaunchedEffect(permissionHelper, alarmManager) {
+        if (permissionHelper != null && alarmManager != null) {
+            alarmManager.setPermissionHelper(permissionHelper)
+        }
+    }
 
     val scrollState = rememberScrollState()
     
@@ -111,14 +120,13 @@ fun SignalEditScreen(
         }
     }
     
-    suspend fun requestPermissionAndTest() {
+    suspend fun requestAlarmPermissionAndTest() {
         if (alarmManager == null) return
         
-        isPreviewLoading = true
-        val permissionGranted = alarmManager.requestAlarmPermission()
+        val alarmPermissionGranted = alarmManager.requestAlarmPermission()
         
-        if (permissionGranted) {
-            // Permission granted, now show the test alarm
+        if (alarmPermissionGranted) {
+            // Both permissions granted, now show the test alarm
             val settings = createTestAlarmSettings(
                 name = name.trim(),
                 description = description.trim(),
@@ -138,7 +146,87 @@ fun SignalEditScreen(
         }
         
         isPreviewLoading = false
+    }
+    
+    suspend fun requestPermissionAndTest() {
+        if (alarmManager == null) return
+        
+        isPreviewLoading = true
         showPermissionDialog = false
+        
+        // First, request notification permission if needed
+        if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
+            permissionHelper.requestNotificationPermission { notificationGranted ->
+                if (notificationGranted) {
+                    // Notification permission granted, now request alarm permission
+                    coroutineScope.launch {
+                        requestAlarmPermissionAndTest()
+                    }
+                } else {
+                    errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+                    showErrorDialog = true
+                    isPreviewLoading = false
+                }
+            }
+        } else {
+            // Notification permission already granted or not needed, check alarm permission
+            requestAlarmPermissionAndTest()
+        }
+    }
+    
+    suspend fun requestAlarmPermissionAndSave() {
+        if (alarmManager == null) return
+        
+        val alarmPermissionGranted = alarmManager.requestAlarmPermission()
+        
+        if (alarmPermissionGranted) {
+            // Both permissions granted, now save the signal
+            val updatedSignalItem = SignalItem(
+                id = signalId,
+                name = name.trim(),
+                timeSlots = timeSlots,
+                description = description.trim(),
+                sound = sound,
+                vibration = vibration,
+                color = color
+            )
+
+            viewModel.updateSignalItem(updatedSignalItem) { result ->
+                result.onSuccess {
+                    onNavigateBack()
+                }.onFailure { exception ->
+                    errorMessage = exception.message ?: "Unknown error occurred"
+                    showErrorDialog = true
+                }
+            }
+        } else {
+            errorMessage = "Alarm permission was denied. Please enable exact alarms in device settings to save this signal."
+            showErrorDialog = true
+        }
+    }
+    
+    suspend fun requestPermissionAndSave() {
+        if (alarmManager == null) return
+        
+        showPermissionDialog = false
+        
+        // First, request notification permission if needed
+        if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
+            permissionHelper.requestNotificationPermission { notificationGranted ->
+                if (notificationGranted) {
+                    // Notification permission granted, now request alarm permission
+                    coroutineScope.launch {
+                        requestAlarmPermissionAndSave()
+                    }
+                } else {
+                    errorMessage = "Notification permission was denied. Please enable notifications in device settings to save this signal."
+                    showErrorDialog = true
+                }
+            }
+        } else {
+            // Notification permission already granted or not needed, check alarm permission
+            requestAlarmPermissionAndSave()
+        }
     }
 
     fun saveSignalItem() {
@@ -152,6 +240,14 @@ fun SignalEditScreen(
             if (timeSlots.isEmpty()) {
                 errorMessage = "At least one time slot is required"
                 showErrorDialog = true
+                return
+            }
+
+            // Check permissions before saving
+            if (permissionHelper != null && !permissionHelper.hasAllPermissions()) {
+                coroutineScope.launch {
+                    requestPermissionAndSave()
+                }
                 return
             }
 

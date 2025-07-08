@@ -16,6 +16,7 @@ import net.mercuryksm.notification.AlarmResult
 import net.mercuryksm.notification.NotificationPermissionDialog
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createTestAlarmSettings
+import net.mercuryksm.notification.rememberPermissionHelper
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,14 @@ fun SignalRegistrationScreen(
     
     val showPreviewButton = alarmManager?.isAlarmSupported() == true
     val coroutineScope = rememberCoroutineScope()
+    val permissionHelper = rememberPermissionHelper()
+    
+    // Setup permission helper with alarm manager if both are available
+    LaunchedEffect(permissionHelper, alarmManager) {
+        if (permissionHelper != null && alarmManager != null) {
+            alarmManager.setPermissionHelper(permissionHelper)
+        }
+    }
     
     suspend fun testAlarm() {
         if (alarmManager == null) return
@@ -98,14 +107,13 @@ fun SignalRegistrationScreen(
         }
     }
     
-    suspend fun requestPermissionAndTest() {
+    suspend fun requestAlarmPermissionAndTest() {
         if (alarmManager == null) return
         
-        isPreviewLoading = true
-        val permissionGranted = alarmManager.requestAlarmPermission()
+        val alarmPermissionGranted = alarmManager.requestAlarmPermission()
         
-        if (permissionGranted) {
-            // Permission granted, now show the test alarm
+        if (alarmPermissionGranted) {
+            // Both permissions granted, now show the test alarm
             val settings = createTestAlarmSettings(
                 name = name.trim(),
                 description = description.trim(),
@@ -120,12 +128,94 @@ fun SignalRegistrationScreen(
                 showErrorDialog = true
             }
         } else {
-            errorMessage = "Alarm permission was denied. Please enable alarms in device settings to use this feature."
+            errorMessage = "Alarm permission was denied. Please enable exact alarms in device settings to use this feature."
             showErrorDialog = true
         }
         
         isPreviewLoading = false
+    }
+    
+    suspend fun requestPermissionAndTest() {
+        if (alarmManager == null) return
+        
+        isPreviewLoading = true
         showPermissionDialog = false
+        
+        // First, request notification permission if needed
+        if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
+            permissionHelper.requestNotificationPermission { notificationGranted ->
+                if (notificationGranted) {
+                    // Notification permission granted, now request alarm permission
+                    coroutineScope.launch {
+                        requestAlarmPermissionAndTest()
+                    }
+                } else {
+                    errorMessage = "Notification permission was denied. Please enable notifications in device settings to use this feature."
+                    showErrorDialog = true
+                    isPreviewLoading = false
+                }
+            }
+        } else {
+            // Notification permission already granted or not needed, check alarm permission
+            requestAlarmPermissionAndTest()
+        }
+    }
+    
+    suspend fun requestAlarmPermissionAndSave() {
+        if (alarmManager == null) return
+        
+        val alarmPermissionGranted = alarmManager.requestAlarmPermission()
+        
+        if (alarmPermissionGranted) {
+            // Both permissions granted, now save the signal
+            val newSignalItem = SignalItem(
+                id = UUID.randomUUID().toString(),
+                name = name.trim(),
+                timeSlots = timeSlots,
+                description = description.trim(),
+                sound = sound,
+                vibration = vibration,
+                color = color
+            )
+            
+            isLoading = true
+            onSignalSaved(newSignalItem) { result ->
+                isLoading = false
+                result.onSuccess {
+                    showSuccessDialog = true
+                }.onFailure { exception ->
+                    errorMessage = "Failed to save: ${exception.message}"
+                    showErrorDialog = true
+                }
+            }
+        } else {
+            errorMessage = "Alarm permission was denied. Please enable exact alarms in device settings to save this signal."
+            showErrorDialog = true
+        }
+    }
+    
+    suspend fun requestPermissionAndSave() {
+        if (alarmManager == null) return
+        
+        showPermissionDialog = false
+        
+        // First, request notification permission if needed
+        if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
+            permissionHelper.requestNotificationPermission { notificationGranted ->
+                if (notificationGranted) {
+                    // Notification permission granted, now request alarm permission
+                    coroutineScope.launch {
+                        requestAlarmPermissionAndSave()
+                    }
+                } else {
+                    errorMessage = "Notification permission was denied. Please enable notifications in device settings to save this signal."
+                    showErrorDialog = true
+                }
+            }
+        } else {
+            // Notification permission already granted or not needed, check alarm permission
+            requestAlarmPermissionAndSave()
+        }
     }
     
     Scaffold(
@@ -205,6 +295,14 @@ fun SignalRegistrationScreen(
                     if (timeSlots.isEmpty()) {
                         errorMessage = "At least one time slot is required"
                         showErrorDialog = true
+                        return@Button
+                    }
+                    
+                    // Check permissions before saving
+                    if (permissionHelper != null && !permissionHelper.hasAllPermissions()) {
+                        coroutineScope.launch {
+                            requestPermissionAndSave()
+                        }
                         return@Button
                     }
                     
