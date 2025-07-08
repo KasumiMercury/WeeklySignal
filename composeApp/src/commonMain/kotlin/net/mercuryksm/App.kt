@@ -1,19 +1,17 @@
 package net.mercuryksm
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import org.jetbrains.compose.ui.tooling.preview.Preview
-import net.mercuryksm.navigation.NavGraph
-import net.mercuryksm.ui.WeeklySignalViewModel
 import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.database.SignalDatabaseService
+import net.mercuryksm.navigation.NavGraph
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createAlarmServiceFactory
+import net.mercuryksm.ui.WeeklySignalViewModel
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview

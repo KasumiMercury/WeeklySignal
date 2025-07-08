@@ -5,20 +5,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
-import net.mercuryksm.ui.WeeklySignalViewModel
+import net.mercuryksm.notification.AlarmResult
+import net.mercuryksm.notification.NotificationPermissionDialog
+import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.notification.createTestAlarmSettings
 import net.mercuryksm.ui.ColorPicker
-import net.mercuryksm.notification.*
-import kotlinx.coroutines.launch
+import net.mercuryksm.ui.WeeklySignalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,7 +210,7 @@ fun SignalEditScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }

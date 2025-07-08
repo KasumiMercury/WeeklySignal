@@ -1,10 +1,10 @@
 package net.mercuryksm.notification
 
 import net.mercuryksm.data.TimeSlot
-import java.awt.SystemTray
-import java.awt.TrayIcon
 import java.awt.Image
+import java.awt.SystemTray
 import java.awt.Toolkit
+import java.awt.TrayIcon
 
 class DesktopSignalAlarmManager : SignalAlarmManager {
     

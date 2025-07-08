@@ -2,44 +2,33 @@ package net.mercuryksm.notification
 
 import android.app.AlarmManager
 import android.app.NotificationChannel
-import android.app.NotificationManager as AndroidNotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
+import android.os.*
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.suspendCancellableCoroutine
-import net.mercuryksm.data.TimeSlot
-import net.mercuryksm.data.SignalItem
-import net.mercuryksm.data.DayOfWeekJp
-import net.mercuryksm.data.database.SignalDatabaseService
-import net.mercuryksm.data.database.AlarmStateEntity
-import net.mercuryksm.data.database.getRoomDatabase
-import kotlin.coroutines.resume
-import androidx.core.net.toUri
-import java.util.Calendar
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import net.mercuryksm.data.DayOfWeekJp
+import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.data.database.AlarmStateEntity
+import net.mercuryksm.data.database.SignalDatabaseService
+import net.mercuryksm.data.database.getRoomDatabase
+import java.util.*
+import android.app.NotificationManager as AndroidNotificationManager
 
 class AndroidSignalAlarmManager(
     private val context: Context,
