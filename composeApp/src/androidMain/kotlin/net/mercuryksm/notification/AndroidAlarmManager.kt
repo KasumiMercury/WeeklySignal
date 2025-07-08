@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.*
@@ -179,13 +180,16 @@ class AndroidSignalAlarmManager(
     }
 
     override suspend fun showTestAlarm(settings: AlarmSettings): AlarmResult {
-        // Maintain existing implementation
         return withContext(Dispatchers.IO) {
             try {
                 if (!hasAlarmPermission()) {
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
+                // Ringtone instance for manual playback control
+                var ringtone: Ringtone? = null
+
+                // The notification itself should be silent since we're managing sound manually
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
@@ -193,11 +197,11 @@ class AndroidSignalAlarmManager(
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setSound(null) // Always silent, sound is handled manually
                     .apply {
-                        if (!settings.sound) {
-                            setSound(null)
-                        }
-                        if (!settings.vibration) {
+                        if (settings.vibration) {
+                            setVibrate(VIBRATION_PATTERN)
+                        } else {
                             setVibrate(null)
                         }
                     }
@@ -208,11 +212,31 @@ class AndroidSignalAlarmManager(
                     notificationManager.notify(TEST_NOTIFICATION_ID, notification)
                 }
 
+                // Manual sound playback to ensure it uses the ALARM stream
+                if (settings.sound) {
+                    try {
+                        val alarmUri = getAlarmSoundUri()
+                        ringtone = RingtoneManager.getRingtone(context, alarmUri)
+                        ringtone?.let {
+                            // Explicitly set audio attributes to use the alarm stream
+                            it.audioAttributes = AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .build()
+                            it.play()
+                        }
+                    } catch (e: Exception) {
+                        // Log or handle error if ringtone fails to play
+                        e.printStackTrace()
+                    }
+                }
+
                 if (settings.vibration) {
                     triggerVibration()
                 }
 
+                // Stop the sound and cancel the notification after a delay
                 Handler(Looper.getMainLooper()).postDelayed({
+                    ringtone?.stop() // Stop the manually played ringtone
                     notificationManager.cancel(TEST_NOTIFICATION_ID)
                 }, TEST_NOTIFICATION_DELAY_MS)
 
