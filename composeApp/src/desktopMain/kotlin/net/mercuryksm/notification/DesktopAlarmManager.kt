@@ -15,27 +15,30 @@ class DesktopSignalAlarmManager : SignalAlarmManager {
     }
     
     override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult {
-        // Desktop版ではスケジューリング機能をサポートしない
+        // Desktop version does not support scheduling functionality
         return AlarmResult.NOT_SUPPORTED
     }
     
     override suspend fun cancelAlarm(alarmId: String): AlarmResult {
-        // Desktop版ではスケジューリング機能をサポートしない
+        // Desktop version does not support scheduling functionality
         return AlarmResult.NOT_SUPPORTED
     }
     
     override suspend fun cancelAllAlarms(): AlarmResult {
-        // Desktop版ではスケジューリング機能をサポートしない
+        // Desktop version does not support scheduling functionality
         return AlarmResult.NOT_SUPPORTED
     }
     
     override suspend fun getScheduledAlarms(): List<String> {
-        // Desktop版ではスケジューリング機能をサポートしない
+        // Desktop version does not support scheduling functionality
         return emptyList()
     }
     
     override suspend fun showTestAlarm(settings: AlarmSettings): AlarmResult {
         return try {
+            if (!SystemTray.isSupported()) {
+                return AlarmResult.NOT_SUPPORTED
+            }
             showDesktopNotification(settings)
             AlarmResult.SUCCESS
         } catch (e: Exception) {
@@ -44,18 +47,18 @@ class DesktopSignalAlarmManager : SignalAlarmManager {
     }
     
     override suspend fun hasAlarmPermission(): Boolean {
-        // Desktop版ではテスト通知のみサポート、スケジューリングはサポートしない
-        return SystemTray.isSupported()
+        // Desktop version always treats permissions as granted for future alarm implementation
+        return true
     }
     
     override suspend fun requestAlarmPermission(): Boolean {
-        // Desktop版ではテスト通知のみサポート、スケジューリングはサポートしない
-        return SystemTray.isSupported()
+        // Desktop version always treats permissions as granted for future alarm implementation
+        return true
     }
     
     override fun isAlarmSupported(): Boolean {
-        // Desktop版ではテスト通知のみサポート、スケジューリングはサポートしない
-        // テストボタンを表示するためにtrueを返す
+        // Desktop version only supports test notifications, not scheduling
+        // Returns true to display the test button
         return SystemTray.isSupported()
     }
     
