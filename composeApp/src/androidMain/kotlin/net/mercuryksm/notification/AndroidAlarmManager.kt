@@ -194,15 +194,10 @@ class AndroidSignalAlarmManager(
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .apply {
-                        if (settings.sound) {
-                            val alarmUri = getAlarmSoundUri()
-                            setSound(alarmUri)
-                        } else {
+                        if (!settings.sound) {
                             setSound(null)
                         }
-                        if (settings.vibration) {
-                            setVibrate(VIBRATION_PATTERN)
-                        } else {
+                        if (!settings.vibration) {
                             setVibrate(null)
                         }
                     }
