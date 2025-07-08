@@ -47,9 +47,7 @@ class AndroidSignalAlarmManager(
         
         // SharedPreferences keys (for migration from legacy data only)
         private const val PREFS_NAME = "weekly_signal_alarms"
-        private const val PREFS_KEY_ALARM_INFO = "alarm_info_"
-        private const val PREFS_KEY_ALL_ALARMS = "all_alarm_ids"
-        
+
         // Intent extras
         const val EXTRA_ALARM_INFO = "alarm_info"
         const val EXTRA_IS_REPEATING = "is_repeating"
