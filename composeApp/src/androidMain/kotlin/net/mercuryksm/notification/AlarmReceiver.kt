@@ -282,6 +282,11 @@ class AlarmReceiver : BroadcastReceiver() {
             
             val ringtone = RingtoneManager.getRingtone(context, alarmUri)
             if (ringtone != null) {
+                // Explicitly set audio attributes to use the alarm stream
+                ringtone.audioAttributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
                 activeRingtones[alarmId] = ringtone
                 ringtone.play()
             }

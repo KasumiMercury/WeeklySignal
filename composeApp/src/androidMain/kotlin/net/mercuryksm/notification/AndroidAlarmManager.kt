@@ -186,7 +186,12 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
-                // The notification itself should be silent since we're managing sound manually
+                // Check notification permissions before proceeding
+                if (!hasNotificationPermission()) {
+                    return@withContext AlarmResult.PERMISSION_DENIED
+                }
+
+                // Use main notification channel (now silent)
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
@@ -216,7 +221,7 @@ class AndroidSignalAlarmManager(
                     notificationManager.notify(TEST_NOTIFICATION_ID, notification)
                 }
 
-                // Manual sound playback to ensure it uses the ALARM stream
+                // Manual sound playback - only if sound is enabled
                 if (settings.sound) {
                     try {
                         val alarmUri = getAlarmSoundUri()
@@ -591,17 +596,14 @@ class AndroidSignalAlarmManager(
                     enableVibration(true)
                     vibrationPattern = VIBRATION_PATTERN
                     
-                    // Set default sound and audio attributes
-                    val audioAttributes = AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                    setSound(getAlarmSoundUri(), audioAttributes)
+                    // No sound for notifications - sound is handled manually
+                    setSound(null, null)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
         }
     }
+
 
     private fun getAlarmSoundUri(): Uri {
         return try {
