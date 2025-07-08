@@ -25,7 +25,8 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
         private const val DISMISS_TEST_ALARM_ACTION = "DISMISS_TEST_ALARM"
-        
+        private val VIBRATION_PATTERN = longArrayOf(0, 300, 200, 300)
+
         // Static management of Ringtone objects for alarm sound control
         val activeRingtones = ConcurrentHashMap<String, Ringtone>()
     }
@@ -99,7 +100,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
                 
                 if (alarmInfo.vibration) {
-                    // Use channel default vibration
+                    // Enable vibration for this notification
+                    setVibrate(VIBRATION_PATTERN)
                 } else {
                     // Disable vibration for this notification
                     setVibrate(null)
@@ -256,18 +258,17 @@ class AlarmReceiver : BroadcastReceiver() {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun triggerVibration(context: Context) {
         try {
-            val vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // Android 12+: Use VibratorManager for better control
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 val vibrator = vibratorManager.defaultVibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(vibrationPattern, -1))
+                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
             } else {
                 // Android 7-11: Use VibrationEffect with legacy Vibrator
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(vibrationPattern, -1))
+                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
             }
         } catch (e: Exception) {
             // Vibration failed, ignore
@@ -282,6 +283,11 @@ class AlarmReceiver : BroadcastReceiver() {
             
             val ringtone = RingtoneManager.getRingtone(context, alarmUri)
             if (ringtone != null) {
+                // Explicitly set audio attributes to use the alarm stream
+                ringtone.audioAttributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
                 activeRingtones[alarmId] = ringtone
                 ringtone.play()
             }

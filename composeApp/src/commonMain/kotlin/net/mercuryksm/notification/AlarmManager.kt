@@ -45,6 +45,13 @@ interface SignalAlarmManager {
     fun isAlarmSupported(): Boolean
     
     /**
+     * Sets the permission helper for managing notification and alarm permissions
+     */
+    fun setPermissionHelper(helper: PermissionHelper) {
+        // Default implementation - platform specific overrides will provide actual functionality
+    }
+    
+    /**
      * Schedules alarms for all time slots in a SignalItem
      */
     suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {

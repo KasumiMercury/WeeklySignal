@@ -47,15 +47,13 @@ class AndroidSignalAlarmManager(
         
         // SharedPreferences keys (for migration from legacy data only)
         private const val PREFS_NAME = "weekly_signal_alarms"
-        private const val PREFS_KEY_ALARM_INFO = "alarm_info_"
-        private const val PREFS_KEY_ALL_ALARMS = "all_alarm_ids"
-        
+
         // Intent extras
         const val EXTRA_ALARM_INFO = "alarm_info"
         const val EXTRA_IS_REPEATING = "is_repeating"
     }
 
-    private var permissionHelper: NotificationPermissionHelper? = null
+    private var permissionHelper: PermissionHelper? = null
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     // SharedPreferences only used for one-time migration from legacy data
     private val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -186,7 +184,12 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
-                // The notification itself should be silent since we're managing sound manually
+                // Check notification permissions before proceeding
+                if (!hasNotificationPermission()) {
+                    return@withContext AlarmResult.PERMISSION_DENIED
+                }
+
+                // Use main notification channel (now silent)
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
@@ -216,7 +219,7 @@ class AndroidSignalAlarmManager(
                     notificationManager.notify(TEST_NOTIFICATION_ID, notification)
                 }
 
-                // Manual sound playback to ensure it uses the ALARM stream
+                // Manual sound playback - only if sound is enabled
                 if (settings.sound) {
                     try {
                         val alarmUri = getAlarmSoundUri()
@@ -259,29 +262,37 @@ class AndroidSignalAlarmManager(
     }
 
     override suspend fun hasAlarmPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager.canScheduleExactAlarms()
-        } else {
-            // For Android 7-11, exact alarms don't require special permission
-            true
+        return permissionHelper?.hasAlarmPermission() ?: run {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                alarmManager.canScheduleExactAlarms()
+            } else {
+                // For Android 7-11, exact alarms don't require special permission
+                true
+            }
         }
     }
 
     override suspend fun requestAlarmPermission(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = Uri.parse("package:${context.packageName}")
+        return permissionHelper?.requestAlarmPermission() ?: run {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (!alarmManager.canScheduleExactAlarms()) {
+                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
+                    return false
                 }
-                context.startActivity(intent)
-                return false
             }
+            return true
         }
-        return true
     }
 
     override fun isAlarmSupported(): Boolean {
         return true
+    }
+    
+    override fun setPermissionHelper(helper: PermissionHelper) {
+        this.permissionHelper = helper
     }
 
     // Batch scheduling function for SignalItem
@@ -563,15 +574,17 @@ class AndroidSignalAlarmManager(
     // Notification channel and other helper methods maintain existing implementation
 
     private fun hasNotificationPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+: Requires POST_NOTIFICATIONS permission
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Android 7-12: Check if notifications are enabled system-wide
-            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        return permissionHelper?.hasNotificationPermission() ?: run {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+: Requires POST_NOTIFICATIONS permission
+                ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                // Android 7-12: Check if notifications are enabled system-wide
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+            }
         }
     }
 
@@ -591,17 +604,14 @@ class AndroidSignalAlarmManager(
                     enableVibration(true)
                     vibrationPattern = VIBRATION_PATTERN
                     
-                    // Set default sound and audio attributes
-                    val audioAttributes = AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                    setSound(getAlarmSoundUri(), audioAttributes)
+                    // No sound for notifications - sound is handled manually
+                    setSound(null, null)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
         }
     }
+
 
     private fun getAlarmSoundUri(): Uri {
         return try {
