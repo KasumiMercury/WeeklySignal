@@ -186,9 +186,6 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
-                // Ringtone instance for manual playback control
-                var ringtone: Ringtone? = null
-
                 // The notification itself should be silent since we're managing sound manually
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -204,6 +201,13 @@ class AndroidSignalAlarmManager(
                         } else {
                             setVibrate(null)
                         }
+                        
+                        // Add dismiss action to stop sound when notification is dismissed
+                        addAction(
+                            android.R.drawable.ic_menu_close_clear_cancel,
+                            "Dismiss",
+                            AlarmReceiver().createTestAlarmDismissIntent(context, TEST_NOTIFICATION_ID)
+                        )
                     }
                     .build()
 
@@ -216,12 +220,14 @@ class AndroidSignalAlarmManager(
                 if (settings.sound) {
                     try {
                         val alarmUri = getAlarmSoundUri()
-                        ringtone = RingtoneManager.getRingtone(context, alarmUri)
+                        val ringtone = RingtoneManager.getRingtone(context, alarmUri)
                         ringtone?.let {
                             // Explicitly set audio attributes to use the alarm stream
                             it.audioAttributes = AudioAttributes.Builder()
                                 .setUsage(AudioAttributes.USAGE_ALARM)
                                 .build()
+                            // Store the ringtone with a test alarm ID so it can be stopped
+                            AlarmReceiver.activeRingtones["test_alarm"] = it
                             it.play()
                         }
                     } catch (e: Exception) {
@@ -236,7 +242,12 @@ class AndroidSignalAlarmManager(
 
                 // Stop the sound and cancel the notification after a delay
                 Handler(Looper.getMainLooper()).postDelayed({
-                    ringtone?.stop() // Stop the manually played ringtone
+                    // Stop test alarm sound using AlarmReceiver's management
+                    AlarmReceiver.activeRingtones.remove("test_alarm")?.let { ringtone ->
+                        if (ringtone.isPlaying) {
+                            ringtone.stop()
+                        }
+                    }
                     notificationManager.cancel(TEST_NOTIFICATION_ID)
                 }, TEST_NOTIFICATION_DELAY_MS)
 
