@@ -4,10 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import net.mercuryksm.ui.WeeklySignalView
-import net.mercuryksm.ui.registration.SignalRegistrationScreen
-import net.mercuryksm.ui.edit.SignalEditScreen
 import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.ui.WeeklySignalView
+import net.mercuryksm.ui.edit.SignalEditScreen
+import net.mercuryksm.ui.registration.SignalRegistrationScreen
 
 @Composable
 fun NavGraph(

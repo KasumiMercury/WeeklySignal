@@ -1,9 +1,8 @@
 package net.mercuryksm.data.database
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
-
-import androidx.room.AutoMigration
 
 @Database(
     entities = [SignalEntity::class, TimeSlotEntity::class, AlarmStateEntity::class],

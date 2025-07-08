@@ -1,7 +1,6 @@
 package net.mercuryksm.data.database
 
 import android.content.Context
-import androidx.room.Room
 
 actual fun getRoomDatabase(): AppDatabase {
     val context = getDatabaseContext() as? Context

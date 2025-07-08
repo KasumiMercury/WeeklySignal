@@ -1,18 +1,14 @@
 package net.mercuryksm.ui.registration
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.TimeSlot
-import net.mercuryksm.ui.edit.TimeSlotEditor
 import net.mercuryksm.ui.ColorPicker
+import net.mercuryksm.ui.edit.TimeSlotEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

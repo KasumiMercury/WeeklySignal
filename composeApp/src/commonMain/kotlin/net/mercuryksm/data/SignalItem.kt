@@ -1,6 +1,6 @@
 package net.mercuryksm.data
 
-import java.util.UUID
+import java.util.*
 
 enum class DayOfWeekJp {
     MONDAY,

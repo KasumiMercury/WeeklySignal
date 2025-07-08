@@ -1,7 +1,7 @@
 package net.mercuryksm.notification
 
-import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
 
 interface SignalAlarmManager {
     /**
