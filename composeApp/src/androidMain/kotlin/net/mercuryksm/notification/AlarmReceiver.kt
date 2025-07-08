@@ -24,9 +24,10 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val CHANNEL_ID = "weekly_signal_alarms"
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
+        private const val DISMISS_TEST_ALARM_ACTION = "DISMISS_TEST_ALARM"
         
         // Static management of Ringtone objects for alarm sound control
-        private val activeRingtones = ConcurrentHashMap<String, Ringtone>()
+        val activeRingtones = ConcurrentHashMap<String, Ringtone>()
     }
     
     private val json = Json { ignoreUnknownKeys = true }
@@ -36,6 +37,7 @@ class AlarmReceiver : BroadcastReceiver() {
         try {
             when (intent.action) {
                 DISMISS_ACTION -> handleDismiss(context, intent)
+                DISMISS_TEST_ALARM_ACTION -> handleTestAlarmDismiss(context, intent)
                 else -> handleAlarm(context, intent)
             }
         } catch (e: Exception) {
@@ -198,6 +200,17 @@ class AlarmReceiver : BroadcastReceiver() {
         notificationManager.cancel(notificationId)
     }
     
+    private fun handleTestAlarmDismiss(context: Context, intent: Intent) {
+        val notificationId = intent.getIntExtra("notification_id", 0)
+        
+        // Stop test alarm sound if it's playing
+        stopAlarmSound("test_alarm")
+        
+        // Clear notification
+        val notificationManager = NotificationManagerCompat.from(context)
+        notificationManager.cancel(notificationId)
+    }
+    
     private fun createMainActivityIntent(context: Context): PendingIntent {
         val intent = Intent(context, net.mercuryksm.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -221,6 +234,20 @@ class AlarmReceiver : BroadcastReceiver() {
         return PendingIntent.getBroadcast(
             context,
             "${alarmId}_dismiss".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+    
+    fun createTestAlarmDismissIntent(context: Context, notificationId: Int): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = DISMISS_TEST_ALARM_ACTION
+            putExtra("notification_id", notificationId)
+        }
+        
+        return PendingIntent.getBroadcast(
+            context,
+            "test_alarm_dismiss".hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.*
@@ -179,13 +180,13 @@ class AndroidSignalAlarmManager(
     }
 
     override suspend fun showTestAlarm(settings: AlarmSettings): AlarmResult {
-        // Maintain existing implementation
         return withContext(Dispatchers.IO) {
             try {
                 if (!hasAlarmPermission()) {
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
+                // The notification itself should be silent since we're managing sound manually
                 val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(settings.title)
@@ -193,18 +194,20 @@ class AndroidSignalAlarmManager(
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setSound(null) // Always silent, sound is handled manually
                     .apply {
-                        if (settings.sound) {
-                            val alarmUri = getAlarmSoundUri()
-                            setSound(alarmUri)
-                        } else {
-                            setSound(null)
-                        }
                         if (settings.vibration) {
                             setVibrate(VIBRATION_PATTERN)
                         } else {
                             setVibrate(null)
                         }
+                        
+                        // Add dismiss action to stop sound when notification is dismissed
+                        addAction(
+                            android.R.drawable.ic_menu_close_clear_cancel,
+                            "Dismiss",
+                            AlarmReceiver().createTestAlarmDismissIntent(context, TEST_NOTIFICATION_ID)
+                        )
                     }
                     .build()
 
@@ -213,11 +216,38 @@ class AndroidSignalAlarmManager(
                     notificationManager.notify(TEST_NOTIFICATION_ID, notification)
                 }
 
+                // Manual sound playback to ensure it uses the ALARM stream
+                if (settings.sound) {
+                    try {
+                        val alarmUri = getAlarmSoundUri()
+                        val ringtone = RingtoneManager.getRingtone(context, alarmUri)
+                        ringtone?.let {
+                            // Explicitly set audio attributes to use the alarm stream
+                            it.audioAttributes = AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .build()
+                            // Store the ringtone with a test alarm ID so it can be stopped
+                            AlarmReceiver.activeRingtones["test_alarm"] = it
+                            it.play()
+                        }
+                    } catch (e: Exception) {
+                        // Log or handle error if ringtone fails to play
+                        e.printStackTrace()
+                    }
+                }
+
                 if (settings.vibration) {
                     triggerVibration()
                 }
 
+                // Stop the sound and cancel the notification after a delay
                 Handler(Looper.getMainLooper()).postDelayed({
+                    // Stop test alarm sound using AlarmReceiver's management
+                    AlarmReceiver.activeRingtones.remove("test_alarm")?.let { ringtone ->
+                        if (ringtone.isPlaying) {
+                            ringtone.stop()
+                        }
+                    }
                     notificationManager.cancel(TEST_NOTIFICATION_ID)
                 }, TEST_NOTIFICATION_DELAY_MS)
 
