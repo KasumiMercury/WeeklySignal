@@ -28,7 +28,7 @@ fun TimeSlotColumn(
     onItemClick: (SignalItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val width = if (timeSlot.hasItems) 120.dp else 20.dp
+    val width = if (timeSlot.hasItems) 120.dp else 40.dp
     val currentTimeInMinutes = timeSlot.getTimeInMinutes()
     
     Column(
@@ -99,7 +99,8 @@ fun DayCell(
                 } else {
                     MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
                 }
-            ),
+            )
+            .clickable { /* Empty cells are now clickable for better touch feedback */ },
         verticalArrangement = Arrangement.Center
     ) {
         // Top spacing

@@ -120,86 +120,69 @@ private fun WeeklyGrid(
     val timeSlots = generateTimeSlots(items)
     val scrollState = rememberLazyListState()
     
-    Column {
-        
-        // Main content area
-        Column {
-            // Time header row
-            Row(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Day label header spacer
-                Spacer(modifier = Modifier.width(WeeklyGridConstants.DAY_LABEL_WIDTH))
-                
-                // Time headers
-                LazyRow(
-                    state = scrollState,
-                    horizontalArrangement = Arrangement.spacedBy(0.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(timeSlots) { timeSlot ->
-                        TimeSlotHeader(
-                            timeSlot = timeSlot,
-                            modifier = Modifier
-                                .width(if (timeSlot.hasItems) 120.dp else 20.dp)
-                                .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
-                        )
-                    }
-                }
-            }
+    Row(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Fixed left side with day labels
+        Column(
+            modifier = Modifier.width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+        ) {
+            // Empty spacer for time header row
+            Spacer(
+                modifier = Modifier.height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
+            )
             
-            // Day rows with full-width dividers
+            // Day labels
             DayOfWeekJp.values().forEach { dayOfWeek ->
-                Row(
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+                        .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Day label
-                    Box(
-                        modifier = Modifier
-                            .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
-                            .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
-                            .background(MaterialTheme.colorScheme.surface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = dayOfWeek.getDisplayName(),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    
-                    // Day cells for all time slots
-                    LazyRow(
-                        state = scrollState,
-                        horizontalArrangement = Arrangement.spacedBy(0.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        items(timeSlots) { timeSlot ->
-                            val currentTimeInMinutes = timeSlot.getTimeInMinutes()
-                            val itemsForThisSlot = items.filter { signalItem ->
-                                signalItem.timeSlots.any { ts ->
-                                    ts.dayOfWeek == dayOfWeek && ts.getTimeInMinutes() == currentTimeInMinutes
-                                }
-                            }
-                            
-                            DayCell(
-                                dayOfWeek = dayOfWeek,
-                                items = itemsForThisSlot,
-                                onItemClick = onItemClick,
-                                modifier = Modifier
-                                    .width(if (timeSlot.hasItems) 120.dp else 20.dp)
-                                    .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
-                            )
-                        }
-                    }
+                    Text(
+                        text = dayOfWeek.getDisplayName(),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 
-                // Full-width horizontal divider after each day row
+                // Divider after each day
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                     thickness = 0.5.dp
                 )
+            }
+        }
+        
+        // Scrollable content area
+        LazyRow(
+            state = scrollState,
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            items(timeSlots) { timeSlot ->
+                Column(
+                    modifier = Modifier.width(if (timeSlot.hasItems) 120.dp else 40.dp)
+                ) {
+                    // Time header
+                    TimeSlotHeader(
+                        timeSlot = timeSlot,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
+                    )
+                    
+                    // Time slot column content
+                    TimeSlotColumn(
+                        timeSlot = timeSlot,
+                        allItems = items,
+                        onItemClick = onItemClick,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
@@ -231,16 +214,12 @@ private fun EmptyState() {
 }
 
 private fun generateTimeSlots(allItems: List<SignalItem>): List<UITimeSlot> {
-    if (allItems.isEmpty()) {
-        return emptyList()
-    }
-    
     val itemTimes = allItems.flatMap { signalItem ->
         signalItem.timeSlots.map { it.getTimeInMinutes() }
     }.toSet()
     
-    val minTime = itemTimes.minOrNull() ?: 0
-    val maxTime = itemTimes.maxOrNull() ?: 1440
+    val minTime = if (itemTimes.isEmpty()) 8 * 60 else itemTimes.minOrNull() ?: 8 * 60
+    val maxTime = if (itemTimes.isEmpty()) 22 * 60 else itemTimes.maxOrNull() ?: 22 * 60
     
     val slots = mutableListOf<UITimeSlot>()
     var currentTime = minTime
@@ -251,17 +230,7 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<UITimeSlot> {
         val hasItems = itemTimes.contains(currentTime)
         
         slots.add(UITimeSlot(hour, minute, hasItems))
-        
-        if (hasItems) {
-            currentTime += 30
-        } else {
-            val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
-            if (nextItemTime != null && nextItemTime - currentTime <= 15) {
-                currentTime = nextItemTime
-            } else {
-                currentTime += 15
-            }
-        }
+        currentTime += 15
     }
     
     return slots
