@@ -19,6 +19,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 @Composable
 fun TimeSlotColumn(
@@ -39,7 +40,7 @@ fun TimeSlotColumn(
             timeSlot = timeSlot,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
+                .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
         )
         
         // Seven day cells
@@ -56,7 +57,7 @@ fun TimeSlotColumn(
                 onItemClick = onItemClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(108.dp) // 40dp × 2 items + 24dp time display + 4dp padding
+                    .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
             )
         }
     }
@@ -105,56 +106,38 @@ private fun DayCell(
                 } else {
                     MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
                 }
-            )
+            ),
+        verticalArrangement = Arrangement.Center
     ) {
+        // Top spacing
+        Spacer(modifier = Modifier.height(WeeklyGridConstants.CELL_SPACING))
+        
         // SignalItems display area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(WeeklyGridConstants.CELL_CONTENT_HEIGHT),
             contentAlignment = Alignment.Center
         ) {
             if (items.isNotEmpty()) {
                 MultipleSignalItemsCell(
                     items = items,
+                    dayOfWeek = dayOfWeek,
                     onItemClick = onItemClick,
-                    modifier = Modifier.padding(2.dp)
+                    modifier = Modifier.padding(WeeklyGridConstants.CELL_PADDING)
                 )
             }
         }
         
-        // Time display at the bottom of each cell (only when items exist)
-        if (items.isNotEmpty()) {
-            val timeCornerRadius = when (items.size) {
-                1 -> RoundedCornerShape(8.dp)
-                else -> RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = timeCornerRadius
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
-                Text(
-                    text = timeText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
+        // Bottom spacing
+        Spacer(modifier = Modifier.height(WeeklyGridConstants.CELL_SPACING))
     }
 }
 
 @Composable
 private fun MultipleSignalItemsCell(
     items: List<SignalItem>,
+    dayOfWeek: DayOfWeekJp,
     onItemClick: (SignalItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -170,32 +153,74 @@ private fun MultipleSignalItemsCell(
                 SignalItemCard(
                     item = items.first(),
                     onClick = onItemClick,
-                    cornerRadius = RoundedCornerShape(8.dp),
+                    cornerRadius = RoundedCornerShape(WeeklyGridConstants.CORNER_RADIUS),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
+                        .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                
+                // Time display at the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(WeeklyGridConstants.TIME_DISPLAY_HEIGHT)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(WeeklyGridConstants.CORNER_RADIUS)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    Text(
+                        text = timeText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
         2 -> {
             // Two items: stack vertically
             Column(
                 modifier = modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
+                verticalArrangement = Arrangement.spacedBy(WeeklyGridConstants.ITEM_SPACING)
             ) {
                 items.forEachIndexed { index, item ->
                     SignalItemCard(
                         item = item,
                         onClick = onItemClick,
                         cornerRadius = if (index == 0) {
-                            RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+                            RoundedCornerShape(topStart = WeeklyGridConstants.CORNER_RADIUS, topEnd = WeeklyGridConstants.CORNER_RADIUS, bottomStart = 0.dp, bottomEnd = 0.dp)
                         } else {
                             RoundedCornerShape(0.dp)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(40.dp)
+                            .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
+                    )
+                }
+                
+                // Time display at the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(WeeklyGridConstants.TIME_DISPLAY_HEIGHT)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = WeeklyGridConstants.CORNER_RADIUS, bottomEnd = WeeklyGridConstants.CORNER_RADIUS)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    Text(
+                        text = timeText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -204,24 +229,24 @@ private fun MultipleSignalItemsCell(
             // Three or more items: show first item + button for additional items
             Column(
                 modifier = modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
+                verticalArrangement = Arrangement.spacedBy(WeeklyGridConstants.ITEM_SPACING)
             ) {
                 // First item (smallest ID)
                 val firstItem = items.minByOrNull { it.id } ?: items.first()
                 SignalItemCard(
                     item = firstItem,
                     onClick = onItemClick,
-                    cornerRadius = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+                    cornerRadius = RoundedCornerShape(topStart = WeeklyGridConstants.CORNER_RADIUS, topEnd = WeeklyGridConstants.CORNER_RADIUS, bottomStart = 0.dp, bottomEnd = 0.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
+                        .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
                 )
                 
                 // Additional items button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(40.dp)
+                        .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
                         .background(
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             shape = RoundedCornerShape(0.dp)
@@ -240,6 +265,27 @@ private fun MultipleSignalItemsCell(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                
+                // Time display at the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(WeeklyGridConstants.TIME_DISPLAY_HEIGHT)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = WeeklyGridConstants.CORNER_RADIUS, bottomEnd = WeeklyGridConstants.CORNER_RADIUS)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    Text(
+                        text = timeText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

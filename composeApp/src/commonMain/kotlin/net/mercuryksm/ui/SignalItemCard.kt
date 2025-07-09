@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 @Composable
 fun SignalItemCard(
@@ -22,12 +23,12 @@ fun SignalItemCard(
     modifier: Modifier = Modifier,
     onClick: (SignalItem) -> Unit = {},
     showTime: Boolean = false,
-    cornerRadius: RoundedCornerShape = RoundedCornerShape(8.dp)
+    cornerRadius: RoundedCornerShape = RoundedCornerShape(WeeklyGridConstants.CORNER_RADIUS)
 ) {
     Card(
         modifier = modifier
-            .width(120.dp)
-            .height(40.dp),
+            .width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+            .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT),
         shape = cornerRadius,
         colors = CardDefaults.cardColors(
             containerColor = Color(item.color),
@@ -76,6 +77,6 @@ fun EmptyTimeSlot(
     Spacer(
         modifier = modifier
             .width(20.dp)
-            .height(80.dp)
+            .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
     )
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 data class UITimeSlot(
     val hour: Int,
@@ -127,16 +128,16 @@ private fun WeeklyGrid(
         ) {
             // Fixed day label column
             Column(
-                modifier = Modifier.width(60.dp)
+                modifier = Modifier.width(WeeklyGridConstants.DAY_LABEL_WIDTH)
             ) {
                 // Spacer to align with time header in TimeSlotColumn
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(WeeklyGridConstants.TIME_HEADER_HEIGHT))
                 
                 DayOfWeekJp.values().forEach { dayOfWeek ->
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(108.dp)
+                            .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
                             .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center
                     ) {
