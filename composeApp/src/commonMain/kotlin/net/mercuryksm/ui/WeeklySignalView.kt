@@ -136,7 +136,7 @@ private fun WeeklyGrid(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(90.dp)
+                            .height(108.dp)
                             .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center
                     ) {
