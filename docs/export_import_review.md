@@ -1,84 +1,54 @@
 # エクスポート/インポート機能レビュー
 
-## 1. 概要
+このドキュメントは、WeeklySignalアプリケーションにおけるエクスポートおよびインポート機能の現在の実装に関するレビューを提供します。
 
-`SignalItem` および `TimeSlot` のエクスポート/インポート機能に関する実装レビュー。
-このレビューは、AndroidおよびDesktopプラットフォームにおける共通ロジックと、各プラットフォーム固有の実装を対象とする。
+## 1. アーキテクチャの概要
 
-**レビュー対象ファイル:**
-- `composeApp/src/commonMain/kotlin/net/mercuryksm/data/ExportImportService.kt`
-- `composeApp/src/commonMain/kotlin/net/mercuryksm/ui/exportimport/ExportImportScreen.kt`
-- `composeApp/src/commonMain/kotlin/net/mercuryksm/data/FileOperationsService.kt`
-- `composeApp/src/commonMain/kotlin/net/mercuryksm/data/SignalItemExportFormat.kt`
-- `composeApp/src/androidMain/kotlin/net/mercuryksm/data/AndroidFileOperationsService.kt`
-- `composeApp/src/desktopMain/kotlin/net/mercuryksm/data/DesktopFileOperationsService.kt`
+エクスポート/インポート機能は、懸念事項を効果的に分離する堅牢なマルチプラットフォームアーキテクチャに基づいて構築されています。
 
----
+-   **UI層**: Composableスクリーン（`ExportImportScreen`、`ExportSelectionScreen`、`ImportSelectionScreen`）は、UIのレンダリングとユーザー入力の取得を担当します。
+-   **ViewModel層**: `WeeklySignalViewModel`は、状態ホルダーとして機能し、エクスポート/インポートフローのロジックを処理します。
+-   **サービス層**: `ExportImportService`は、`SignalItem`データをJSON形式に変換するコアビジネスロジックを含みます。
+-   **プラットフォーム固有層**: `FileOperationsService`インターフェースは、ファイルシステムとの相互作用を抽象化し、Android（`AndroidFileOperationsService`）およびデスクトップ（`DesktopFileOperationsService`）用の具体的な実装を提供します。
 
-## 2. 全体アーキテクチャ
+この分離により、コードベースはクリーンで保守しやすく、スケーラブルになります。
 
-この機能は、関心事の分離が非常によくできており、クリーンなアーキテクチャを採用している。
+## 2. データフロー
 
-- **UIレイヤー (`ExportImportScreen.kt`):** ユーザーインタラクションを担当。ViewModelを介してビジネスロジックを呼び出し、状態の変更に応じてUIを更新する。
-- **ビジネスロジック (`ExportImportService.kt`):** データのエクスポート（シリアライズ）とインポート（デシリアライズ）、およびデータの検証を担当する。特定のプラットフォームやUIフレームワークに依存しない、純粋なKotlinで記述されている。
-- **プラットフォーム抽象化レイヤー (`FileOperationsService.kt`):** ファイルの読み書きというプラットフォーム固有の操作を抽象化するインターフェース。`expect`/`actual` パターンとDI（`rememberFileOperationsService`）を効果的に使用している。
-- **プラットフォーム実装レイヤー:**
-    - **`AndroidFileOperationsService.kt`:** AndroidのStorage Access Framework (SAF) を利用してファイル操作を実装。
-    - **`DesktopFileOperationsService.kt`:** Java Swingの `JFileChooser` を利用してファイル操作を実装。
+### エクスポートフロー
 
-この設計により、共通ロジックの再利用性が最大化され、プラットフォーム固有のコードが明確に分離されている。これは、Kotlin Multiplatformのベストプラクティスに沿った優れた設計である。
+1.  ユーザーは`ExportImportScreen`に移動し、エクスポートプロセスを開始して`ExportSelectionScreen`に遷移します。
+2.  ユーザーは、エクスポートするシグナルアイテムや特定のタイムスロットを選択します。この選択は`WeeklySignalViewModel`でキャプチャされます。
+3.  確認後、`ExportImportScreen`はエクスポートロジックをトリガーします。
+4.  `ExportImportService`は、選択されたデータを構造化されたJSON形式にシリアル化します。
+5.  適切な`FileOperationsService`の実装が、JSONデータをデバイス上の`.weeklysignal`ファイルに書き込みます。
 
----
+### インポートフロー
 
-## 3. 詳細レビュー
+1.  ユーザーは「ファイルからインポート」を選択し、プラットフォーム固有のファイルピッカーを使用して`.weeklysignal`ファイルを選択します。
+2.  `FileOperationsService`はファイルの内容を読み取ります。
+3.  `ExportImportService`はJSONをパースし、`SignalItem`オブジェクトのリストにデシリアル化します。
+4.  アプリは`ImportSelectionScreen`に移動し、ユーザーはパースされたアイテムを確認し、インポートするものを選択できます。
+5.  確認後、`WeeklySignalViewModel`は選択された`SignalItem`をデータベースに保存します。
 
-### 3.1. 共通ロジック (`ExportImportService`, `SignalItemExportFormat`)
+## 3. 強み
 
-#### 評価点 (Good)
-- **シリアライズ:** `kotlinx.serialization` を使用して、`SignalItem` のリストをJSON形式に変換している。これは標準的で堅牢なアプローチである。
-- **データフォーマット:** `WeeklySignalExportData` というラッパーオブジェクトを定義し、エクスポートファイルのバージョン、エクスポート日時、アプリバージョンなどのメタデータを含めている。これにより、将来的なフォーマット変更に対する後方互換性の維持が容易になる。
-- **データ検証:** インポート時に、IDの欠落、不正な値（時刻や曜日）、IDの重複など、堅牢なデータ検証を行っている。これにより、不正なデータによるアプリケーションのクラッシュやデータ破損を防いでいる。
-- **ファイル名生成:** `yyyy-MM-dd_HH-mm-ss` 形式のタイムスタンプを含むファイル名を生成しており、ユーザーが複数のエクスポートファイルを管理しやすくなっている。
+-   **クリーンな関心の分離**: アーキテクチャは、UI、状態管理、ビジネスロジック、プラットフォーム固有のコードを明確に分離しています。
+-   **選択的な操作**: ユーザーがエクスポートおよびインポートするものを正確に選択できる機能は、優れた柔軟性を提供します。
+-   **優れたプラットフォーム抽象化**: `FileOperationsService`インターフェースは、KMPプロジェクトにおけるプラットフォーム固有の詳細を抽象化する好例です。
+-   **モダンな状態管理**: ViewModelでの`StateFlow`とUIでの`collectAsStateWithLifecycle`の使用は、最新のベストプラクティスに従っています。
+-   **人間が読めるデータ形式**: JSONはエクスポート形式として良い選択であり、機械で解析可能であると同時に人間が読める形式です。メタデータの含まれている点もプラスです。
 
-#### 改善提案 (Suggestions)
-- **なし:** 現状の実装は非常に堅牢で、よく考慮されている。
+## 4. 改善点
 
-### 3.2. プラットフォーム実装
+-   **トランザクションによるインポート**: 現在のインポートプロセスでは、アイテムが1つずつデータベースに追加されます。途中でエラーが発生した場合、データベースが不整合な、部分的にインポートされた状態になる可能性があります。
+    -   **推奨事項**: トランザクションによるインポートメカニズムを実装します。`SignalRepository`に`addSignalItems(items: List<SignalItem>)`のような新しいメソッドを追加することで、インポート全体を単一のデータベーストランザクション内で実行し、原子性を確保できます。
 
-#### Android (`AndroidFileOperationsService.kt`)
-- **評価点 (Good):**
-    - Androidのモダンなファイルアクセス方法である **Storage Access Framework (SAF)** を使用している。`onExportFile` と `onImportFile` のコールバック（実体は `rememberLauncherForActivityResult`）を介して `Intent` を発行する方法は、スコープストレージの要件を満たし、セキュリティ的にも推奨される正しい実装である。
-    - I/O処理を `withContext(Dispatchers.IO)` 内で実行しており、メインスレッドをブロックしないように配慮されている。
+-   **インポート時の競合解決**: アプリケーションには現在、インポート時の競合を処理する戦略がありません。データベースに一致するUUIDを持つアイテムが既に存在する場合、どのような動作になるかは明確ではありません。UIテキストには競合の処理について言及されていますが、ロジックはまだ実装されていません。
+    -   **推奨事項**: インポートする前に競合（例: UUIDに基づく）を検出します。`ImportSelectionScreen`で競合するアイテムにフラグを立て、ユーザーに**上書き**、**スキップ**、または**両方を保持**などのアクションを選択できるようにします。
 
-#### Desktop (`DesktopFileOperationsService.kt`)
-- **評価点 (Good):**
-    - Java標準のUIコンポーネントである `JFileChooser` を使用しており、Desktopアプリケーションとして自然なファイル選択ダイアログを提供している。
-    - `FileNameExtensionFilter` を使用して、ユーザーが `.weeklysignal` ファイルを簡単に見つけられるようにしている。
-    - ファイル拡張子を自動的に付与する処理があり、ユーザーの利便性を高めている。
-    - こちらもI/O処理は `Dispatchers.IO` で実行されている。
+-   **ViewModelの責務**: `WeeklySignalViewModel`は、週表示、アイテム登録、およびエクスポート/インポートフロー全体をカバーするなど、多くの責務を蓄積しています。
+    -   **推奨事項**: エクスポート/インポートロジックと状態を専用の`ExportImportViewModel`にリファクタリングします。これにより、関心の分離が改善され、`WeeklySignalViewModel`の複雑さが軽減され、コードの管理が容易になります。
 
-### 3.3. UIとユーザーエクスペリエンス (`ExportImportScreen.kt`)
-
-#### 評価点 (Good)
-- **状態管理:** `isExporting`, `isImporting` といった状態を `remember` で管理し、処理中はボタンを無効化したり、インジケーターを表示したりすることで、ユーザーに処理中であることを明確に伝えている。
-- **フィードバック:** 処理の成功・失敗を `AlertDialog` でユーザーに通知しており、操作の結果が分かりやすい。
-- **インポート時のコンフリクト解決:**
-    - インポート時に既存データとのIDコンフリクトを検出し、ユーザーに解決方法を委ねるUIを提供している点は非常に優れている。
-    - 「上書き」「既存を維持」「タイムスロットをマージ」という3つの具体的な選択肢を提示しており、ユーザーが意図した通りのデータ統合を行える。これは非常に丁寧な設計である。
-- **情報提供:** ファイルフォーマットに関する説明セクションがあり、ユーザーが機能について理解を深められるようになっている。
-
-#### 改善提案 (Suggestions)
-- **インポート前のプレビュー:** （より高度な機能として）コンフリクト解決ダイアログで、どのデータがどのように変更されるのか（例：「'Morning Meeting' のタイムスロットが2件追加されます」）を具体的に表示できると、ユーザーはさらに安心して操作を行える。
-- **部分的なインポート/エクスポート:** （将来的な機能拡張として）特定の `SignalItem` だけを選択してエクスポートしたり、インポートするファイルから特定の項目だけを選択してインポートしたりする機能があれば、さらに柔軟性が高まる。
-
----
-
-## 4. 総括
-
-全体として、このエクスポート/インポート機能は、技術選定、アーキテクチャ設計、ユーザーエクスペリエンスの観点から、**非常に高品質な実装**であると言える。
-
-- **堅牢性:** 厳格なデータ検証とエラーハンドリングにより、安定した動作が期待できる。
-- **保守性:** 関心事が明確に分離されているため、将来的な仕様変更や機能追加が容易である。
-- **UX:** ユーザーへのフィードバックが丁寧で、特にコンフリクト解決の仕組みは秀逸である。
-
-軽微な改善提案は挙げたものの、現状でもリリース可能な品質に達している。素晴らしい仕事です。
+-   **ハードコードされた文字列**: 多くのユーザー向け文字列（ダイアログメッセージ、ボタンラベル、説明テキスト）がComposable関数に直接ハードコードされています。
+    -   **推奨事項**: すべてのユーザー向け文字列を共通のリソースファイル（例: Composeの組み込みリソース管理を使用）に外部化します。これは、将来のローカライズ作業にとって非常に重要であり、保守性を向上させます。
