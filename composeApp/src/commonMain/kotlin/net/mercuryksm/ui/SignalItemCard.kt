@@ -20,12 +20,13 @@ import net.mercuryksm.data.SignalItem
 fun SignalItemCard(
     item: SignalItem,
     modifier: Modifier = Modifier,
-    onClick: (SignalItem) -> Unit = {}
+    onClick: (SignalItem) -> Unit = {},
+    showTime: Boolean = false
 ) {
     Card(
         modifier = modifier
             .width(120.dp)
-            .height(80.dp),
+            .height(40.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(item.color),
@@ -37,30 +38,32 @@ fun SignalItemCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = if (showTime) Arrangement.SpaceBetween else Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = item.getTruncatedName(10),
-                fontSize = 12.sp,
+                text = item.getTruncatedName(6),
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
             
-            Text(
-                text = if (item.timeSlots.isNotEmpty()) {
-                    item.timeSlots.first().getTimeDisplayText()
-                } else {
-                    "--:--"
-                },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                color = Color.White
-            )
+            if (showTime) {
+                Text(
+                    text = if (item.timeSlots.isNotEmpty()) {
+                        item.timeSlots.first().getTimeDisplayText()
+                    } else {
+                        "--:--"
+                    },
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = Color.White
+                )
+            }
         }
     }
 }
