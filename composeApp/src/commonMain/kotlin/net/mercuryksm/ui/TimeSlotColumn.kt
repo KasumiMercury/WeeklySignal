@@ -125,11 +125,18 @@ private fun DayCell(
         
         // Time display at the bottom of each cell (only when items exist)
         if (items.isNotEmpty()) {
+            val timeCornerRadius = when (items.size) {
+                1 -> RoundedCornerShape(8.dp)
+                else -> RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 8.dp, bottomEnd = 8.dp)
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(24.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = timeCornerRadius
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
@@ -155,12 +162,21 @@ private fun MultipleSignalItemsCell(
     
     when (items.size) {
         1 -> {
-            // Single item: display at full height
-            SignalItemCard(
-                item = items.first(),
-                onClick = onItemClick,
-                modifier = modifier.fillMaxSize()
-            )
+            // Single item: display at top with consistent height
+            Column(
+                modifier = modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Top
+            ) {
+                SignalItemCard(
+                    item = items.first(),
+                    onClick = onItemClick,
+                    cornerRadius = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
         }
         2 -> {
             // Two items: stack vertically
@@ -168,13 +184,18 @@ private fun MultipleSignalItemsCell(
                 modifier = modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
-                items.forEach { item ->
+                items.forEachIndexed { index, item ->
                     SignalItemCard(
                         item = item,
                         onClick = onItemClick,
+                        cornerRadius = if (index == 0) {
+                            RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+                        } else {
+                            RoundedCornerShape(0.dp)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .height(40.dp)
                     )
                 }
             }
@@ -190,24 +211,25 @@ private fun MultipleSignalItemsCell(
                 SignalItemCard(
                     item = firstItem,
                     onClick = onItemClick,
+                    cornerRadius = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .height(40.dp)
                 )
                 
                 // Additional items button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .height(40.dp)
                         .background(
                             color = MaterialTheme.colorScheme.secondaryContainer,
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(0.dp)
                         )
                         .border(
                             width = 1.dp,
                             color = MaterialTheme.colorScheme.outline,
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(0.dp)
                         )
                         .clickable { showModal = true }
                         .padding(4.dp),

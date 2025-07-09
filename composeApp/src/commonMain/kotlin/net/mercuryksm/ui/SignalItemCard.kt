@@ -21,13 +21,14 @@ fun SignalItemCard(
     item: SignalItem,
     modifier: Modifier = Modifier,
     onClick: (SignalItem) -> Unit = {},
-    showTime: Boolean = false
+    showTime: Boolean = false,
+    cornerRadius: RoundedCornerShape = RoundedCornerShape(8.dp)
 ) {
     Card(
         modifier = modifier
             .width(120.dp)
             .height(40.dp),
-        shape = RoundedCornerShape(8.dp),
+        shape = cornerRadius,
         colors = CardDefaults.cardColors(
             containerColor = Color(item.color),
             contentColor = Color.White
