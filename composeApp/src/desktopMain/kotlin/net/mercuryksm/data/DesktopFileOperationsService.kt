@@ -2,7 +2,6 @@ package net.mercuryksm.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.awt.Desktop
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -76,45 +75,4 @@ actual class FileOperationsServiceImpl : FileOperationsService {
         }
     }
     
-    override suspend fun shareFile(
-        content: String,
-        fileName: String
-    ): FileOperationResult = withContext(Dispatchers.IO) {
-        try {
-            // For desktop, sharing means saving to a default location and optionally opening file explorer
-            val userHome = System.getProperty("user.home")
-            val downloadsDir = File(userHome, "Downloads")
-            
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
-            }
-            
-            val file = File(downloadsDir, fileName)
-            
-            // Handle file name conflicts
-            var finalFile = file
-            var counter = 1
-            while (finalFile.exists()) {
-                val nameWithoutExt = fileName.substringBeforeLast(".")
-                val extension = fileName.substringAfterLast(".")
-                finalFile = File(downloadsDir, "${nameWithoutExt}_$counter.$extension")
-                counter++
-            }
-            
-            finalFile.writeText(content)
-            
-            // Try to open the file location in file explorer
-            try {
-                if (Desktop.isDesktopSupported()) {
-                    Desktop.getDesktop().open(downloadsDir)
-                }
-            } catch (e: Exception) {
-                // Ignore desktop opening errors
-            }
-            
-            FileOperationResult.Success("File shared to: ${finalFile.absolutePath}")
-        } catch (e: Exception) {
-            FileOperationResult.Error("Failed to share file: ${e.message}")
-        }
-    }
 }

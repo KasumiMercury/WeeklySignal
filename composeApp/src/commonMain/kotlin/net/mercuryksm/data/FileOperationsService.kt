@@ -18,11 +18,6 @@ interface FileOperationsService {
     ): FileOperationResult
     
     suspend fun importFromFile(): FileReadResult
-    
-    suspend fun shareFile(
-        content: String,
-        fileName: String
-    ): FileOperationResult
 }
 
 expect class FileOperationsServiceImpl() : FileOperationsService

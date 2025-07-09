@@ -6,7 +6,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,7 +32,6 @@ fun ExportImportScreen(
     
     var isExporting by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
-    var isSharing by remember { mutableStateOf(false) }
     
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
@@ -48,18 +46,9 @@ fun ExportImportScreen(
     val coroutineScope = rememberCoroutineScope()
     
     // Create file operations service based on platform
-    val fileOperationsService = try {
-        FileOperationsServiceImpl()
-    } catch (e: Exception) {
-        null
-    }
+    val fileOperationsService = rememberFileOperationsService()
     
     suspend fun handleExport() {
-        if (fileOperationsService == null) {
-            dialogMessage = "File operations not supported on this platform"
-            showErrorDialog = true
-            return
-        }
         
         isExporting = true
         
@@ -93,11 +82,6 @@ fun ExportImportScreen(
     }
     
     suspend fun handleImport() {
-        if (fileOperationsService == null) {
-            dialogMessage = "File operations not supported on this platform"
-            showErrorDialog = true
-            return
-        }
         
         isImporting = true
         
@@ -141,43 +125,6 @@ fun ExportImportScreen(
         }
     }
     
-    suspend fun handleShare() {
-        if (fileOperationsService == null) {
-            dialogMessage = "Sharing not supported on this platform"
-            showErrorDialog = true
-            return
-        }
-        
-        isSharing = true
-        
-        try {
-            val exportResult = exportImportService.exportSignalItems(signalItems)
-            
-            when (exportResult) {
-                is ExportResult.Success -> {
-                    val fileName = exportImportService.generateFileName()
-                    val shareResult = fileOperationsService.shareFile(exportResult.exportData, fileName)
-                    
-                    when (shareResult) {
-                        is FileOperationResult.Success -> {
-                            dialogMessage = shareResult.message
-                            showSuccessDialog = true
-                        }
-                        is FileOperationResult.Error -> {
-                            dialogMessage = shareResult.message
-                            showErrorDialog = true
-                        }
-                    }
-                }
-                is ExportResult.Error -> {
-                    dialogMessage = exportResult.message
-                    showErrorDialog = true
-                }
-            }
-        } finally {
-            isSharing = false
-        }
-    }
     
     fun handleConflictResolution(resolution: ConflictResolution) {
         val resolvedItems = conflictResolver.resolveConflicts(
@@ -245,60 +192,30 @@ fun ExportImportScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                handleExport()
+                            }
+                        },
+                        enabled = !isExporting && !isImporting && signalItems.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    handleExport()
-                                }
-                            },
-                            enabled = !isExporting && !isImporting && !isSharing && signalItems.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            Text("Export to File")
+                        if (isExporting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                        
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    handleShare()
-                                }
-                            },
-                            enabled = !isExporting && !isImporting && !isSharing && signalItems.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (isSharing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            Text("Share")
-                        }
+                        Text("Export to File")
                     }
                 }
             }
@@ -328,7 +245,7 @@ fun ExportImportScreen(
                                 handleImport()
                             }
                         },
-                        enabled = !isExporting && !isImporting && !isSharing,
+                        enabled = !isExporting && !isImporting,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isImporting) {
