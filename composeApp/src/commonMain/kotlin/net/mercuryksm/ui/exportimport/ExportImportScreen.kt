@@ -7,14 +7,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,10 +23,13 @@ import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 @Composable
 fun ExportImportScreen(
     viewModel: WeeklySignalViewModel,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onNavigateToExportSelection: () -> Unit,
+    onNavigateToImportSelection: () -> Unit
 ) {
     val signalItems by viewModel.signalItems.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboard.current
+    val exportSelectionState by viewModel.exportSelectionState.collectAsStateWithLifecycle()
+    val selectedImportItems by viewModel.selectedImportItems.collectAsStateWithLifecycle()
     
     var isExporting by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
@@ -39,53 +38,27 @@ fun ExportImportScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
     
-    var showImportConflictDialog by remember { mutableStateOf(false) }
-    var conflictingItems by remember { mutableStateOf<List<SignalItem>>(emptyList()) }
-    var importedItems by remember { mutableStateOf<List<SignalItem>>(emptyList()) }
-    
-    // Selection state for export
-    var exportSelectionState by remember { mutableStateOf(ExportSelectionState()) }
-    var isSelectiveExportMode by remember { mutableStateOf(false) }
-    
     val exportImportService = remember { ExportImportService() }
-    val conflictResolver = remember { ImportConflictResolver() }
     val coroutineScope = rememberCoroutineScope()
     
     // Create file operations service based on platform
     val fileOperationsService = rememberFileOperationsService()
     
-    // Initialize selection state when signalItems change
-    LaunchedEffect(signalItems) {
-        exportSelectionState = SelectionStateManager.createInitialState(signalItems)
-    }
-    
-    suspend fun handleExport() {
+    suspend fun handleExportWithSelection(selectionState: ExportSelectionState) {
         isExporting = true
         
         try {
-            val exportResult = if (isSelectiveExportMode) {
-                exportImportService.exportSelectedSignalItems(exportSelectionState)
-            } else {
-                exportImportService.exportSignalItems(signalItems)
-            }
+            val exportResult = exportImportService.exportSelectedSignalItems(selectionState)
             
             when (exportResult) {
                 is ExportResult.Success -> {
-                    val fileName = if (isSelectiveExportMode) {
-                        exportImportService.generateSelectiveFileName(exportSelectionState)
-                    } else {
-                        exportImportService.generateFileName()
-                    }
+                    val fileName = exportImportService.generateSelectiveFileName(selectionState)
                     val fileResult = fileOperationsService.exportToFile(exportResult.exportData, fileName)
                     
                     when (fileResult) {
                         is FileOperationResult.Success -> {
-                            val summaryMessage = if (isSelectiveExportMode) {
-                                val exportSummary = exportImportService.getExportSummary(exportSelectionState)
-                                "Successfully exported ${exportSummary.selectedSignalItemCount} signal items with ${exportSummary.selectedTimeSlotCount} time slots"
-                            } else {
-                                "Successfully exported ${signalItems.size} signal items"
-                            }
+                            val exportSummary = exportImportService.getExportSummary(selectionState)
+                            val summaryMessage = "Successfully exported ${exportSummary.selectedSignalItemCount} signal items with ${exportSummary.selectedTimeSlotCount} time slots"
                             dialogMessage = "$summaryMessage\n\n${fileResult.message}"
                             showSuccessDialog = true
                         }
@@ -105,8 +78,45 @@ fun ExportImportScreen(
         }
     }
     
-    suspend fun handleImport() {
+    suspend fun handleImportWithSelection(selectedItems: List<SignalItem>) {
+        isImporting = true
         
+        try {
+            selectedItems.forEach { signalItem ->
+                viewModel.addSignalItem(signalItem)
+            }
+            dialogMessage = "Successfully imported ${selectedItems.size} signal items"
+            showSuccessDialog = true
+        } catch (e: Exception) {
+            dialogMessage = "Failed to import signal items: ${e.message}"
+            showErrorDialog = true
+        } finally {
+            isImporting = false
+            viewModel.clearImportedItems()
+        }
+    }
+
+    // Handle export selection result
+    LaunchedEffect(exportSelectionState) {
+        exportSelectionState?.let { state ->
+            coroutineScope.launch {
+                handleExportWithSelection(state)
+                viewModel.clearExportSelectionState()
+            }
+        }
+    }
+    
+    // Handle import selection result
+    LaunchedEffect(selectedImportItems) {
+        if (selectedImportItems.isNotEmpty()) {
+            coroutineScope.launch {
+                handleImportWithSelection(selectedImportItems)
+                viewModel.clearSelectedImportItems()
+            }
+        }
+    }
+    
+    suspend fun handleImport() {
         isImporting = true
         
         try {
@@ -118,20 +128,9 @@ fun ExportImportScreen(
                     
                     when (importResult) {
                         is ImportResult.Success -> {
-                            val conflicts = conflictResolver.findConflicts(signalItems, importResult.signalItems)
-                            
-                            if (conflicts.isNotEmpty()) {
-                                conflictingItems = conflicts
-                                importedItems = importResult.signalItems
-                                showImportConflictDialog = true
-                            } else {
-                                // No conflicts, import directly
-                                importResult.signalItems.forEach { signalItem ->
-                                    viewModel.addSignalItem(signalItem)
-                                }
-                                dialogMessage = "Successfully imported ${importResult.signalItems.size} signal items"
-                                showSuccessDialog = true
-                            }
+                            // Store imported items in ViewModel and navigate to selection screen
+                            viewModel.setImportedItems(importResult.signalItems)
+                            onNavigateToImportSelection()
                         }
                         is ImportResult.Error -> {
                             dialogMessage = importResult.message
@@ -149,24 +148,6 @@ fun ExportImportScreen(
         }
     }
     
-    
-    fun handleConflictResolution(resolution: ConflictResolution) {
-        val resolvedItems = conflictResolver.resolveConflicts(
-            signalItems, 
-            importedItems, 
-            resolution
-        )
-        
-        // Clear existing items and add resolved items
-        viewModel.clearAllSignalItems()
-        resolvedItems.forEach { signalItem ->
-            viewModel.addSignalItem(signalItem)
-        }
-        
-        showImportConflictDialog = false
-        dialogMessage = "Successfully imported with conflict resolution"
-        showSuccessDialog = true
-    }
     
     Scaffold(
         topBar = {
@@ -199,95 +180,29 @@ fun ExportImportScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Export",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        
-                        // Export Mode Toggle
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Switch(
-                                checked = isSelectiveExportMode,
-                                onCheckedChange = { isSelectiveExportMode = it },
-                                enabled = !isExporting && !isImporting
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Selective",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Export",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
                     
-                    if (isSelectiveExportMode) {
-                        // Selective Export UI
-                        SelectableSignalItemList(
-                            selectionState = exportSelectionState,
-                            onSignalItemSelectionChanged = { signalItemId ->
-                                exportSelectionState = SelectionStateManager.toggleSignalItemSelection(
-                                    exportSelectionState,
-                                    signalItemId
-                                )
-                            },
-                            onTimeSlotSelectionChanged = { signalItemId, timeSlotId ->
-                                exportSelectionState = SelectionStateManager.toggleTimeSlotSelection(
-                                    exportSelectionState,
-                                    signalItemId,
-                                    timeSlotId
-                                )
-                            },
-                            onSignalItemExpansionChanged = { signalItemId ->
-                                exportSelectionState = SelectionStateManager.toggleSignalItemExpansion(
-                                    exportSelectionState,
-                                    signalItemId
-                                )
-                            },
-                            onSelectAllChanged = { selected ->
-                                exportSelectionState = SelectionStateManager.selectAll(
-                                    exportSelectionState,
-                                    selected
-                                )
-                            }
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // Selection Summary
-                        SelectionSummary(
-                            selectionState = exportSelectionState
-                        )
-                    } else {
-                        // Full Export UI
-                        Text(
-                            text = "Export all your signal items to a file for backup or sharing with other devices.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        
-                        Text(
-                            text = "Current signal items: ${signalItems.size}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = "Export your signal items to a file for backup or sharing with other devices.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Text(
+                        text = "Current signal items: ${signalItems.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     
                     // Export Button
                     Button(
                         onClick = {
-                            coroutineScope.launch {
-                                handleExport()
-                            }
+                            onNavigateToExportSelection()
                         },
-                        enabled = !isExporting && !isImporting && signalItems.isNotEmpty() && 
-                                (!isSelectiveExportMode || exportSelectionState.hasSelection),
+                        enabled = !isExporting && !isImporting && signalItems.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isExporting) {
@@ -304,13 +219,7 @@ fun ExportImportScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(
-                            if (isSelectiveExportMode) {
-                                "Export Selected Items"
-                            } else {
-                                "Export All Items"
-                            }
-                        )
+                        Text("Select Items to Export")
                     }
                 }
             }
@@ -427,48 +336,4 @@ fun ExportImportScreen(
         )
     }
     
-    // Import Conflict Resolution Dialog
-    if (showImportConflictDialog) {
-        AlertDialog(
-            onDismissRequest = { showImportConflictDialog = false },
-            title = { Text("Import Conflicts") },
-            text = {
-                Column {
-                    Text("Found ${conflictingItems.size} conflicting signal items:")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    conflictingItems.forEach { item ->
-                        Text("• ${item.name}", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("How would you like to resolve these conflicts?")
-                }
-            },
-            confirmButton = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        onClick = { handleConflictResolution(ConflictResolution.REPLACE_EXISTING) }
-                    ) {
-                        Text("Replace")
-                    }
-                    TextButton(
-                        onClick = { handleConflictResolution(ConflictResolution.KEEP_EXISTING) }
-                    ) {
-                        Text("Keep")
-                    }
-                    TextButton(
-                        onClick = { handleConflictResolution(ConflictResolution.MERGE_TIME_SLOTS) }
-                    ) {
-                        Text("Merge")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showImportConflictDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }

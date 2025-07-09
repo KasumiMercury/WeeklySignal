@@ -9,6 +9,8 @@ import net.mercuryksm.ui.weekly.WeeklySignalView
 import net.mercuryksm.ui.edit.SignalEditScreen
 import net.mercuryksm.ui.registration.SignalRegistrationScreen
 import net.mercuryksm.ui.exportimport.ExportImportScreen
+import net.mercuryksm.ui.exportimport.ExportSelectionScreen
+import net.mercuryksm.ui.exportimport.ImportSelectionScreen
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 
 @Composable
@@ -69,6 +71,41 @@ fun NavGraph(
             ExportImportScreen(
                 viewModel = viewModel,
                 onBackPressed = {
+                    navController.popBackStack()
+                },
+                onNavigateToExportSelection = {
+                    navController.navigate(Screen.ExportSelection.route)
+                },
+                onNavigateToImportSelection = {
+                    navController.navigate(Screen.ImportSelection.route)
+                }
+            )
+        }
+        
+        composable(Screen.ExportSelection.route) {
+            ExportSelectionScreen(
+                viewModel = viewModel,
+                onBackPressed = {
+                    navController.popBackStack()
+                },
+                onExportSelected = { selectionState ->
+                    // Pass the selection state back to the ExportImportScreen
+                    viewModel.setExportSelectionState(selectionState)
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(Screen.ImportSelection.route) {
+            ImportSelectionScreen(
+                importedItems = viewModel.importedItems.value,
+                existingItems = viewModel.signalItems.value,
+                onBackPressed = {
+                    navController.popBackStack()
+                },
+                onImportSelected = { selectedItems ->
+                    // Pass the selected items back to the ExportImportScreen
+                    viewModel.setSelectedImportItems(selectedItems)
                     navController.popBackStack()
                 }
             )
