@@ -8,6 +8,7 @@ interface SignalDatabaseService {
     suspend fun deleteSignalItem(signalId: String): Result<Unit>
     suspend fun getSignalItemById(signalId: String): Result<SignalItem?>
     suspend fun getAllSignalItems(): Result<List<SignalItem>>
+    suspend fun clearAllSignalItems(): Result<Unit>
     suspend fun clearAllData(): Result<Unit>
     
     // Alarm state management methods

@@ -84,6 +84,19 @@ class WeeklySignalViewModel(
         return signalItems.value
     }
     
+    fun clearAllSignalItems(onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = signalRepository.clearAllSignalItems()
+            result.onSuccess {
+                // Cancel all alarms
+                signalItems.value.forEach { signalItem ->
+                    cancelSignalItemAlarms(signalItem)
+                }
+            }
+            onResult(result)
+        }
+    }
+    
     // Alarm management methods
     
     private fun scheduleSignalItemAlarms(signalItem: SignalItem) {

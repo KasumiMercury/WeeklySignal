@@ -8,6 +8,7 @@ import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.ui.weekly.WeeklySignalView
 import net.mercuryksm.ui.edit.SignalEditScreen
 import net.mercuryksm.ui.registration.SignalRegistrationScreen
+import net.mercuryksm.ui.exportimport.ExportImportScreen
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 
 @Composable
@@ -28,6 +29,9 @@ fun NavGraph(
                 },
                 onItemClick = { signalItem ->
                     navController.navigate(Screen.SignalEdit.createRoute(signalItem.id))
+                },
+                onExportImportClick = {
+                    navController.navigate(Screen.ExportImport.route)
                 }
             )
         }
@@ -58,6 +62,15 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 alarmManager = alarmManager
+            )
+        }
+        
+        composable(Screen.ExportImport.route) {
+            ExportImportScreen(
+                viewModel = viewModel,
+                onBackPressed = {
+                    navController.popBackStack()
+                }
             )
         }
     }

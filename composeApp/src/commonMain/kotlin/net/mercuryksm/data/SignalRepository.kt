@@ -108,6 +108,28 @@ class SignalRepository(
         return _signalItems.value
     }
     
+    suspend fun clearAllSignalItems(): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            val result = if (databaseService != null) {
+                databaseService.clearAllSignalItems()
+            } else {
+                Result.success(Unit)
+            }
+            
+            if (result.isSuccess) {
+                _signalItems.value = emptyList()
+            }
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
     suspend fun refreshFromDatabase(): Result<Unit> {
         return try {
             _isLoading.value = true

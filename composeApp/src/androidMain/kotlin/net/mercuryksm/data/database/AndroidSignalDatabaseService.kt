@@ -82,6 +82,19 @@ class AndroidSignalDatabaseService(
         }
     }
     
+    override suspend fun clearAllSignalItems(): Result<Unit> {
+        return try {
+            val signalEntities = databaseRepository.getAllSignals()
+            signalEntities.forEach { signal ->
+                databaseRepository.deleteTimeSlotsBySignalId(signal.id)
+                databaseRepository.deleteSignal(signal.id)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     override suspend fun clearAllData(): Result<Unit> {
         return try {
             val signalEntities = databaseRepository.getAllSignals()

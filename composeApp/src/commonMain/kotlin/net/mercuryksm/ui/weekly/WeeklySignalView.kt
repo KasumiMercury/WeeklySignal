@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,7 +20,8 @@ fun WeeklySignalView(
     viewModel: WeeklySignalViewModel,
     modifier: Modifier = Modifier,
     onAddSignalClick: () -> Unit = {},
-    onItemClick: (SignalItem) -> Unit = {}
+    onItemClick: (SignalItem) -> Unit = {},
+    onExportImportClick: () -> Unit = {}
 ) {
     val items by viewModel.signalItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -35,6 +37,14 @@ fun WeeklySignalView(
                         text = "Weekly Signal",
                         fontWeight = FontWeight.Bold
                     )
+                },
+                actions = {
+                    IconButton(onClick = onExportImportClick) {
+                        Icon(
+                            imageVector = Icons.Default.ImportExport,
+                            contentDescription = "Export/Import"
+                        )
+                    }
                 }
             )
         },
