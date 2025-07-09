@@ -20,8 +20,8 @@ import net.mercuryksm.notification.NotificationPermissionDialog
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createTestAlarmSettings
 import net.mercuryksm.notification.rememberPermissionHelper
-import net.mercuryksm.ui.ColorPicker
-import net.mercuryksm.ui.WeeklySignalViewModel
+import net.mercuryksm.ui.components.ColorPicker
+import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

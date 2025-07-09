@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
+import net.mercuryksm.ui.WeeklyGridConstants
 
 @Composable
 fun DayLabelsColumn(
@@ -20,13 +21,13 @@ fun DayLabelsColumn(
     ) {
         // Empty spacer for time header row
         Spacer(
-            modifier = Modifier.height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
+            modifier = Modifier.Companion.height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
         )
         
         // Day labels
         DayOfWeekJp.values().forEach { dayOfWeek ->
             Box(
-                modifier = Modifier
+                modifier = Modifier.Companion
                     .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
                     .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
                     .background(MaterialTheme.colorScheme.surface),

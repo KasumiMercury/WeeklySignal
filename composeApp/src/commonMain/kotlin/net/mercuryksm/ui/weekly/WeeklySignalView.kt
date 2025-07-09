@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,9 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
-import net.mercuryksm.ui.WeeklyGridConstants
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

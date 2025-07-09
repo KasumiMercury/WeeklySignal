@@ -1,6 +1,7 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -12,6 +13,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.TimeSlotItem
+import net.mercuryksm.ui.UITimeSlot
+import net.mercuryksm.ui.WeeklyGridConstants
+import net.mercuryksm.ui.generateTimeSlotItems
+import net.mercuryksm.ui.weekly.components.DayCell
+import net.mercuryksm.ui.weekly.components.TimeSlotHeader
 
 @Composable
 fun WeeklyGrid(
@@ -44,7 +51,7 @@ private fun ScrollableTimeSlots(
     timeSlotItems: List<TimeSlotItem>,
     items: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit,
-    scrollState: androidx.compose.foundation.lazy.LazyListState,
+    scrollState: LazyListState,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -59,7 +66,7 @@ private fun ScrollableTimeSlots(
                         timeSlotItem = timeSlotItem,
                         items = items,
                         onItemClick = onItemClick,
-                        modifier = Modifier.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+                        modifier = Modifier.Companion.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
                     )
                 }
                 is TimeSlotItem.Spacer -> {
@@ -146,8 +153,8 @@ private fun TimeSlotSpacer(
         
         // Empty spacer for content area
         Spacer(
-            modifier = Modifier.height(
-                WeeklyGridConstants.CELL_TOTAL_HEIGHT * 7 + 
+            modifier = Modifier.Companion.height(
+                WeeklyGridConstants.CELL_TOTAL_HEIGHT * 7 +
                 (0.5.dp * 7) // Account for dividers
             )
         )
@@ -174,7 +181,7 @@ private fun TimeSlotColumn(
                     timeSlot.dayOfWeek == dayOfWeek && timeSlot.getTimeInMinutes() == currentTimeInMinutes
                 }
             }
-            
+
             DayCell(
                 dayOfWeek = dayOfWeek,
                 items = items,

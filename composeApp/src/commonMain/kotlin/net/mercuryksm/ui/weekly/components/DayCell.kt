@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
+import net.mercuryksm.ui.components.SignalItemCard
 
 @Composable
 fun DayCell(
@@ -36,7 +38,7 @@ fun DayCell(
         verticalArrangement = Arrangement.Center
     ) {
         // Top spacing
-        Spacer(modifier = Modifier.height(WeeklyGridConstants.CELL_SPACING))
+        Spacer(modifier = Modifier.Companion.height(WeeklyGridConstants.CELL_SPACING))
         
         // SignalItems display area
         Box(
@@ -50,13 +52,13 @@ fun DayCell(
                     items = items,
                     dayOfWeek = dayOfWeek,
                     onItemClick = onItemClick,
-                    modifier = Modifier.padding(WeeklyGridConstants.CELL_PADDING)
+                    modifier = Modifier.Companion.padding(WeeklyGridConstants.CELL_PADDING)
                 )
             }
         }
         
         // Bottom spacing
-        Spacer(modifier = Modifier.height(WeeklyGridConstants.CELL_SPACING))
+        Spacer(modifier = Modifier.Companion.height(WeeklyGridConstants.CELL_SPACING))
     }
 }
 
@@ -119,7 +121,12 @@ private fun MultipleSignalItemsCell(
                         item = item,
                         onClick = onItemClick,
                         cornerRadius = if (index == 0) {
-                            RoundedCornerShape(topStart = WeeklyGridConstants.CORNER_RADIUS, topEnd = WeeklyGridConstants.CORNER_RADIUS, bottomStart = 0.dp, bottomEnd = 0.dp)
+                            RoundedCornerShape(
+                                topStart = WeeklyGridConstants.CORNER_RADIUS,
+                                topEnd = WeeklyGridConstants.CORNER_RADIUS,
+                                bottomStart = 0.dp,
+                                bottomEnd = 0.dp
+                            )
                         } else {
                             RoundedCornerShape(0.dp)
                         },
@@ -162,7 +169,12 @@ private fun MultipleSignalItemsCell(
                 SignalItemCard(
                     item = firstItem,
                     onClick = onItemClick,
-                    cornerRadius = RoundedCornerShape(topStart = WeeklyGridConstants.CORNER_RADIUS, topEnd = WeeklyGridConstants.CORNER_RADIUS, bottomStart = 0.dp, bottomEnd = 0.dp),
+                    cornerRadius = RoundedCornerShape(
+                        topStart = WeeklyGridConstants.CORNER_RADIUS,
+                        topEnd = WeeklyGridConstants.CORNER_RADIUS,
+                        bottomStart = 0.dp,
+                        bottomEnd = 0.dp
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
