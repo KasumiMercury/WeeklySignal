@@ -5,7 +5,7 @@ import androidx.compose.ui.unit.dp
 object WeeklyGridConstants {
     // SignalItem dimensions
     val SIGNAL_ITEM_WIDTH = 120.dp
-    val SIGNAL_ITEM_HEIGHT = 40.dp
+    val SIGNAL_ITEM_HEIGHT = 44.dp
     
     // Time display dimensions
     val TIME_DISPLAY_HEIGHT = 28.dp

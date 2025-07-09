@@ -45,7 +45,7 @@ fun SignalItemCard(
         ) {
             Text(
                 text = item.getTruncatedName(6),
-                fontSize = 10.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
                 maxLines = 1,

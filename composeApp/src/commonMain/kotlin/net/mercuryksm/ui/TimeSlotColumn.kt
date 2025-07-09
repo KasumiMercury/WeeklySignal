@@ -35,13 +35,6 @@ fun TimeSlotColumn(
         modifier = modifier.width(width),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Time header
-        TimeSlotHeader(
-            timeSlot = timeSlot,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
-        )
         
         // Seven day cells
         DayOfWeekJp.values().forEach { dayOfWeek ->
@@ -59,18 +52,12 @@ fun TimeSlotColumn(
                     .fillMaxWidth()
                     .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
             )
-            
-            // Add horizontal divider after each day cell
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                thickness = 0.5.dp
-            )
         }
     }
 }
 
 @Composable
-private fun TimeSlotHeader(
+fun TimeSlotHeader(
     timeSlot: UITimeSlot,
     modifier: Modifier = Modifier
 ) {
@@ -98,7 +85,7 @@ private fun TimeSlotHeader(
 }
 
 @Composable
-private fun DayCell(
+fun DayCell(
     dayOfWeek: DayOfWeekJp,
     items: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit,
