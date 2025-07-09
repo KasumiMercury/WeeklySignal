@@ -51,11 +51,11 @@ fun SelectableSignalItemList(
         )
         
         // SignalItem List
-        Column(
+        LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            selectionState.signalItemSelections.forEach { selection ->
+            items(selectionState.signalItemSelections) { selection ->
                 SelectableSignalItemCard(
                     selectionState = selection,
                     onSignalItemSelectionChanged = onSignalItemSelectionChanged,
