@@ -39,9 +39,10 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
   - **Desktop**: DesktopAlarmManager with mock implementation for development
 
 ### UI Layer (`ui/`)
-- **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling
-- **SignalItemCard.kt**: Individual signal item display component (120dp width, color-coded)
-- **TimeSlotColumn.kt**: Vertical column showing all days for a specific time slot
+- **WeeklySignalView.kt**: Main weekly schedule view with synchronized horizontal scrolling and full-width row dividers
+- **SignalItemCard.kt**: Individual signal item display component (120dp width, 44dp height, color-coded, configurable corner radius)
+- **TimeSlotColumn.kt**: Contains TimeSlotHeader and DayCell components for time-based grid layout
+- **Constants.kt**: Centralized UI dimension constants for consistent styling across components
 - **WeeklySignalViewModel.kt**: ViewModel managing SignalItem state and alarm scheduling
 
 #### Registration Flow (`ui/registration/`)
@@ -121,27 +122,71 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 ## UI Implementation Details
 
 ### WeeklySignal Interface Design
-- **Layout**: 7-day vertical axis × time horizontal axis grid
-- **Scrolling**: Single LazyRow for synchronized horizontal scrolling across all days
+- **Layout**: 7-day vertical axis × time horizontal axis grid with full-width horizontal dividers
+- **Scrolling**: Synchronized horizontal scrolling across all rows using shared LazyListState
 - **Components**: Fixed day labels (60dp width) + scrollable time slots
-- **SignalItem Cards**: Fixed 120dp width, 80dp height, color-coded, 10-character name truncation
-- **Time Display**: 24-hour format (HH:MM)
-- **Multiple Time Slots**: Same SignalItem appears in multiple time/day combinations as configured
+- **SignalItem Cards**: Fixed 120dp width, 44dp height, color-coded, 6-character name truncation
+- **Time Display**: 24-hour format (HH:MM), displayed at bottom of each cell with consistent styling
+- **Multiple SignalItems**: Same cell can contain multiple SignalItems with adaptive display modes
+- **Cell Dimensions**: 116dp content height + 4dp spacing = 120dp total height per row
 
 ### Scroll Synchronization Architecture
-**Critical Implementation Note**: Uses single LazyRow structure to avoid Compose Multiplatform scrolling limitations:
+**Critical Implementation Note**: Uses restructured layout with synchronized LazyRows:
 
-1. **Single LazyRow Structure**: One horizontal scrolling container for all time slots
-2. **TimeSlotColumn Pattern**: Each time slot contains a vertical column with 7 day cells
+1. **Row-Based Structure**: Each day has its own row with synchronized horizontal scrolling
+2. **Shared LazyListState**: Single scroll state synchronized across time header and all day rows
 3. **Fixed Headers**: Time labels and day labels remain stationary during scroll
-4. **Shared State**: Single `LazyListState` manages scroll position
+4. **Full-Width Dividers**: Horizontal dividers span the entire screen width for visual separation
 
 ### Key Design Patterns
 - **Time Slot Generation**: Dynamic time slots based on actual SignalItem times (15-30min intervals)
 - **Data Organization**: Items grouped by time, then distributed across days
-- **Text Truncation**: `getTruncatedName(10)` with "..." for longer names
+- **Text Truncation**: `getTruncatedName(6)` with "..." for longer names
 - **Material 3 Theming**: Color-coded SignalItems with custom colors
 - **Color Picker**: UI component for selecting custom SignalItem colors
+
+### Multiple SignalItems Display System
+- **Single Item**: Full-height display with unified corner radius (8dp all corners)
+- **Two Items**: Vertically stacked with first item having top corners rounded, second item no corners
+- **Three+ Items**: First item + "+N" button, with modal dialog for selection
+- **Time Display**: Unified at bottom of each cell with consistent styling (14sp font, 28dp height)
+- **Corner Radius System**: Adaptive corner radius based on item count for visual cohesion
+- **Modal Dialog**: Shows all items in a cell with unified day/time display at bottom
+
+### UI Constants (Constants.kt)
+Centralized dimension management for consistent styling:
+
+```kotlin
+object WeeklyGridConstants {
+    // SignalItem dimensions
+    val SIGNAL_ITEM_WIDTH = 120.dp
+    val SIGNAL_ITEM_HEIGHT = 44.dp
+    
+    // Time display dimensions
+    val TIME_DISPLAY_HEIGHT = 28.dp
+    
+    // Padding and spacing
+    val CELL_PADDING = 2.dp
+    val CELL_SPACING = 2.dp
+    val ITEM_SPACING = 1.dp
+    
+    // Cell dimensions
+    val CELL_CONTENT_HEIGHT = 116.dp // (44dp × 2) + 1dp + 28dp
+    val CELL_TOTAL_HEIGHT = 120.dp   // Content + (2dp × 2) spacing
+    
+    // Layout dimensions
+    val TIME_HEADER_HEIGHT = 40.dp
+    val DAY_LABEL_WIDTH = 60.dp
+    val CORNER_RADIUS = 8.dp
+}
+```
+
+### Component Architecture Details
+- **TimeSlotHeader**: Displays time labels (HH:MM format) with responsive width
+- **DayCell**: Container for multiple SignalItems with adaptive layout
+- **MultipleSignalItemsCell**: Handles 1/2/3+ item display logic with corner radius adaptation
+- **SignalItemsModal**: Modal dialog for selecting from 3+ items with unified time display
+- **SignalItemCard**: Individual item display with configurable corner radius and show/hide time option
 
 ## Alarm/Notification System
 
@@ -194,25 +239,30 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 
 ### Common Issues and Solutions
 - **Build Issues**: Always use desktop-only builds for verification when Android SDK not configured
-- **Scroll Sync Problems**: Ensure single LazyRow architecture, avoid nested scrollable components
+- **Scroll Sync Problems**: Ensure shared LazyListState across all row LazyRows, avoid nested scrollable components
 - **Performance**: Use `remember` for expensive calculations, avoid recreating TimeSlots unnecessarily
 - **Nested Scrolling**: Use regular `Column` instead of `LazyColumn` when inside scrollable containers
+- **Multiple Items Display**: Use MultipleSignalItemsCell for adaptive display based on item count
+- **UI Dimension Changes**: Modify Constants.kt for consistent styling across all components
 
 ## Key Implementation Insights
 
 ### Technical Decisions
-1. **Single LazyRow Architecture**: Solves Compose Multiplatform nested scrolling limitations
-2. **Color-Coded SignalItems**: Each SignalItem has configurable color for visual distinction
-3. **Repository Pattern**: Centralized data management with reactive state updates
-4. **Platform-Specific Database Services**: Unified interface with platform-appropriate implementations
-5. **Alarm State Persistence**: Tracks alarm scheduling state in database for reliability
-6. **Batch Alarm Operations**: Efficiently manage multiple alarms per SignalItem
+1. **Row-Based Layout Architecture**: Restructured from single LazyRow to row-based layout with synchronized scrolling
+2. **Multiple SignalItems Support**: Adaptive display system for 1, 2, and 3+ items in same cell
+3. **Centralized UI Constants**: All dimensions managed in Constants.kt for consistent styling
+4. **Color-Coded SignalItems**: Each SignalItem has configurable color for visual distinction
+5. **Repository Pattern**: Centralized data management with reactive state updates
+6. **Platform-Specific Database Services**: Unified interface with platform-appropriate implementations
+7. **Alarm State Persistence**: Tracks alarm scheduling state in database for reliability
+8. **Batch Alarm Operations**: Efficiently manage multiple alarms per SignalItem
 
 ### Sample Data Patterns
 - **Morning Meeting**: Monday, Wednesday, Friday at 9:00 AM
 - **Lunch Break**: Monday through Friday at 12:30 PM
 - **Project Review**: Wednesday at 3:00 PM only
 - **Exercise Time**: Tuesday/Thursday at 6:30 PM, Saturday at 7:00 PM
+- **Multiple Items**: Same time slot can contain multiple SignalItems with adaptive display
 
 ## Navigation Flow
 - **Main View**: WeeklySignalView displays all SignalItems in weekly grid
