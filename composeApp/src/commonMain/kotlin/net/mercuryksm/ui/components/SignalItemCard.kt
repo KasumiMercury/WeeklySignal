@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

@@ -1,6 +1,7 @@
 package net.mercuryksm.ui
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 object WeeklyGridConstants {
     // SignalItem dimensions
@@ -27,4 +28,15 @@ object WeeklyGridConstants {
     
     // Corner radius
     val CORNER_RADIUS = 8.dp
+    
+    // Time slot generation constants
+    const val TIME_INTERVAL_MINUTES = 15
+    const val SPACER_WIDTH_PER_INTERVAL = 40 // dp per 15-minute interval
+    const val DEFAULT_START_HOUR = 8
+    const val DEFAULT_END_HOUR = 22
+    const val MAX_MINUTES_PER_DAY = 1440 // 24 * 60
+    
+    // Time label font sizes
+    val TIME_LABEL_FONT_SIZE = 8.sp
+    val MEMORY_MARK_FONT_SIZE = 8.sp
 }

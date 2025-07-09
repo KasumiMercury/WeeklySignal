@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

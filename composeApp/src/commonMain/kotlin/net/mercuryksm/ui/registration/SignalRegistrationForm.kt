@@ -7,7 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.TimeSlot
-import net.mercuryksm.ui.ColorPicker
+import net.mercuryksm.ui.components.ColorPicker
 import net.mercuryksm.ui.edit.TimeSlotEditor
 
 @OptIn(ExperimentalMaterial3Api::class)

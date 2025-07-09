@@ -5,14 +5,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import net.mercuryksm.notification.SignalAlarmManager
-import net.mercuryksm.ui.WeeklySignalView
+import net.mercuryksm.ui.weekly.WeeklySignalView
 import net.mercuryksm.ui.edit.SignalEditScreen
 import net.mercuryksm.ui.registration.SignalRegistrationScreen
+import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    viewModel: net.mercuryksm.ui.WeeklySignalViewModel,
+    viewModel: WeeklySignalViewModel,
     alarmManager: SignalAlarmManager? = null
 ) {
     NavHost(
