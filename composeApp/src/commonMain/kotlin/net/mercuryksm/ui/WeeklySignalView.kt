@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
@@ -31,6 +32,11 @@ data class UITimeSlot(
     fun getDisplayText(): String {
         return String.format("%02d:%02d", hour, minute)
     }
+}
+
+sealed class TimeSlotItem {
+    data class TimeSlot(val uiTimeSlot: UITimeSlot) : TimeSlotItem()
+    data class Spacer(val width: Int, val startTime: Int) : TimeSlotItem() // width in dp, startTime in minutes
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,7 +123,7 @@ private fun WeeklyGrid(
     items: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit
 ) {
-    val timeSlots = generateTimeSlots(items)
+    val timeSlotItems = generateTimeSlotItems(items)
     val scrollState = rememberLazyListState()
     
     Row(
@@ -163,25 +169,81 @@ private fun WeeklyGrid(
             horizontalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(timeSlots) { timeSlot ->
-                Column(
-                    modifier = Modifier.width(if (timeSlot.hasItems) 120.dp else 40.dp)
-                ) {
-                    // Time header
-                    TimeSlotHeader(
-                        timeSlot = timeSlot,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
-                    )
-                    
-                    // Time slot column content
-                    TimeSlotColumn(
-                        timeSlot = timeSlot,
-                        allItems = items,
-                        onItemClick = onItemClick,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            items(timeSlotItems) { timeSlotItem ->
+                when (timeSlotItem) {
+                    is TimeSlotItem.TimeSlot -> {
+                        Column(
+                            modifier = Modifier.width(120.dp)
+                        ) {
+                            // Time header
+                            TimeSlotHeader(
+                                timeSlot = timeSlotItem.uiTimeSlot,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
+                            )
+                            
+                            // Time slot column content
+                            TimeSlotColumn(
+                                timeSlot = timeSlotItem.uiTimeSlot,
+                                allItems = items,
+                                onItemClick = onItemClick,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    is TimeSlotItem.Spacer -> {
+                        Column(
+                            modifier = Modifier.width(timeSlotItem.width.dp)
+                        ) {
+                            // Time header with memory marks
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(WeeklyGridConstants.TIME_HEADER_HEIGHT),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    val numMemoryMarks = (timeSlotItem.width / 40).coerceAtLeast(1)
+                                    repeat(numMemoryMarks) { index ->
+                                        val timeOffset = index * 15
+                                        val currentTime = timeSlotItem.startTime + timeOffset
+                                        val hour = currentTime / 60
+                                        val minute = currentTime % 60
+                                        
+                                        if (index == 0 && numMemoryMarks > 1) {
+                                            // First mark shows time for longer gaps
+                                            Text(
+                                                text = String.format("%02d:%02d", hour, minute),
+                                                fontSize = 8.sp,
+                                                color = MaterialTheme.colorScheme.outline,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        } else {
+                                            // Other marks show memory line
+                                            Text(
+                                                text = "|",
+                                                fontSize = 8.sp,
+                                                color = MaterialTheme.colorScheme.outline,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Empty spacer for content area
+                            Spacer(
+                                modifier = Modifier.height(
+                                    WeeklyGridConstants.CELL_TOTAL_HEIGHT * 7 + 
+                                    (0.5.dp * 7) // Account for dividers
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -213,15 +275,19 @@ private fun EmptyState() {
     }
 }
 
-private fun generateTimeSlots(allItems: List<SignalItem>): List<UITimeSlot> {
+private fun generateTimeSlotItems(allItems: List<SignalItem>): List<TimeSlotItem> {
     val itemTimes = allItems.flatMap { signalItem ->
         signalItem.timeSlots.map { it.getTimeInMinutes() }
-    }.toSet()
+    }.toSet().sorted()
     
-    val minTime = if (itemTimes.isEmpty()) 8 * 60 else itemTimes.minOrNull() ?: 8 * 60
-    val maxTime = if (itemTimes.isEmpty()) 22 * 60 else itemTimes.maxOrNull() ?: 22 * 60
+    if (itemTimes.isEmpty()) {
+        return emptyList()
+    }
     
-    val slots = mutableListOf<UITimeSlot>()
+    val minTime = itemTimes.minOrNull() ?: 0
+    val maxTime = itemTimes.maxOrNull() ?: 1440
+    
+    val timeSlotItems = mutableListOf<TimeSlotItem>()
     var currentTime = minTime
     
     while (currentTime <= maxTime) {
@@ -229,10 +295,30 @@ private fun generateTimeSlots(allItems: List<SignalItem>): List<UITimeSlot> {
         val minute = currentTime % 60
         val hasItems = itemTimes.contains(currentTime)
         
-        slots.add(UITimeSlot(hour, minute, hasItems))
-        currentTime += 15
+        if (hasItems) {
+            // Add the actual time slot
+            timeSlotItems.add(
+                TimeSlotItem.TimeSlot(
+                    UITimeSlot(hour, minute, true)
+                )
+            )
+            currentTime += 15
+        } else {
+            // Add memory marks for empty intervals
+            val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
+            val gapToNextItem = nextItemTime?.let { it - currentTime } ?: 15
+            
+            if (gapToNextItem >= 15) {
+                val memoryIntervals = (gapToNextItem / 15).coerceAtLeast(1)
+                val spacerWidth = memoryIntervals * 40
+                timeSlotItems.add(TimeSlotItem.Spacer(spacerWidth, currentTime))
+                currentTime += memoryIntervals * 15
+            } else {
+                currentTime += 15
+            }
+        }
     }
     
-    return slots
+    return timeSlotItems
 }
 
