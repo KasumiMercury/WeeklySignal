@@ -149,12 +149,10 @@ private fun WeeklyGrid(
                         )
                     }
                     
-                    if (dayOfWeek != DayOfWeekJp.SUNDAY) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            thickness = 0.5.dp
-                        )
-                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        thickness = 0.5.dp
+                    )
                 }
             }
             

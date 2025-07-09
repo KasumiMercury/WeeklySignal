@@ -59,6 +59,12 @@ fun TimeSlotColumn(
                     .fillMaxWidth()
                     .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
             )
+            
+            // Add horizontal divider after each day cell
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                thickness = 0.5.dp
+            )
         }
     }
 }
@@ -174,7 +180,7 @@ private fun MultipleSignalItemsCell(
                     val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -217,7 +223,7 @@ private fun MultipleSignalItemsCell(
                     val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -282,7 +288,7 @@ private fun MultipleSignalItemsCell(
                     val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -296,6 +302,7 @@ private fun MultipleSignalItemsCell(
     if (showModal) {
         SignalItemsModal(
             items = items,
+            dayOfWeek = dayOfWeek,
             onItemClick = { item ->
                 showModal = false
                 onItemClick(item)
@@ -308,6 +315,7 @@ private fun MultipleSignalItemsCell(
 @Composable
 private fun SignalItemsModal(
     items: List<SignalItem>,
+    dayOfWeek: DayOfWeekJp,
     onItemClick: (SignalItem) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -342,12 +350,34 @@ private fun SignalItemsModal(
                         SignalItemCard(
                             item = item,
                             onClick = onItemClick,
-                            showTime = true,
+                            showTime = false,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(60.dp)
+                                .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
                         )
                     }
+                }
+                
+                // Unified time and day display at the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(WeeklyGridConstants.CORNER_RADIUS)
+                        )
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    Text(
+                        text = "${dayOfWeek.getDisplayName()} ${timeText}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
                 
                 Row(

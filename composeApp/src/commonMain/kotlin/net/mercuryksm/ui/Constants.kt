@@ -8,7 +8,7 @@ object WeeklyGridConstants {
     val SIGNAL_ITEM_HEIGHT = 40.dp
     
     // Time display dimensions
-    val TIME_DISPLAY_HEIGHT = 24.dp
+    val TIME_DISPLAY_HEIGHT = 28.dp
     
     // Padding and spacing
     val CELL_PADDING = 2.dp
