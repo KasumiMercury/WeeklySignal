@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +16,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -41,6 +43,10 @@ fun ExportImportScreen(
     var conflictingItems by remember { mutableStateOf<List<SignalItem>>(emptyList()) }
     var importedItems by remember { mutableStateOf<List<SignalItem>>(emptyList()) }
     
+    // Selection state for export
+    var exportSelectionState by remember { mutableStateOf(ExportSelectionState()) }
+    var isSelectiveExportMode by remember { mutableStateOf(false) }
+    
     val exportImportService = remember { ExportImportService() }
     val conflictResolver = remember { ImportConflictResolver() }
     val coroutineScope = rememberCoroutineScope()
@@ -48,21 +54,39 @@ fun ExportImportScreen(
     // Create file operations service based on platform
     val fileOperationsService = rememberFileOperationsService()
     
+    // Initialize selection state when signalItems change
+    LaunchedEffect(signalItems) {
+        exportSelectionState = SelectionStateManager.createInitialState(signalItems)
+    }
+    
     suspend fun handleExport() {
-        
         isExporting = true
         
         try {
-            val exportResult = exportImportService.exportSignalItems(signalItems)
+            val exportResult = if (isSelectiveExportMode) {
+                exportImportService.exportSelectedSignalItems(exportSelectionState)
+            } else {
+                exportImportService.exportSignalItems(signalItems)
+            }
             
             when (exportResult) {
                 is ExportResult.Success -> {
-                    val fileName = exportImportService.generateFileName()
+                    val fileName = if (isSelectiveExportMode) {
+                        exportImportService.generateSelectiveFileName(exportSelectionState)
+                    } else {
+                        exportImportService.generateFileName()
+                    }
                     val fileResult = fileOperationsService.exportToFile(exportResult.exportData, fileName)
                     
                     when (fileResult) {
                         is FileOperationResult.Success -> {
-                            dialogMessage = fileResult.message
+                            val summaryMessage = if (isSelectiveExportMode) {
+                                val exportSummary = exportImportService.getExportSummary(exportSelectionState)
+                                "Successfully exported ${exportSummary.selectedSignalItemCount} signal items with ${exportSummary.selectedTimeSlotCount} time slots"
+                            } else {
+                                "Successfully exported ${signalItems.size} signal items"
+                            }
+                            dialogMessage = "$summaryMessage\n\n${fileResult.message}"
                             showSuccessDialog = true
                         }
                         is FileOperationResult.Error -> {
@@ -175,30 +199,95 @@ fun ExportImportScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = "Export",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Export",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        
+                        // Export Mode Toggle
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Switch(
+                                checked = isSelectiveExportMode,
+                                onCheckedChange = { isSelectiveExportMode = it },
+                                enabled = !isExporting && !isImporting
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Selective",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     
-                    Text(
-                        text = "Export your signal items to a file for backup or sharing with other devices.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isSelectiveExportMode) {
+                        // Selective Export UI
+                        SelectableSignalItemList(
+                            selectionState = exportSelectionState,
+                            onSignalItemSelectionChanged = { signalItemId ->
+                                exportSelectionState = SelectionStateManager.toggleSignalItemSelection(
+                                    exportSelectionState,
+                                    signalItemId
+                                )
+                            },
+                            onTimeSlotSelectionChanged = { signalItemId, timeSlotId ->
+                                exportSelectionState = SelectionStateManager.toggleTimeSlotSelection(
+                                    exportSelectionState,
+                                    signalItemId,
+                                    timeSlotId
+                                )
+                            },
+                            onSignalItemExpansionChanged = { signalItemId ->
+                                exportSelectionState = SelectionStateManager.toggleSignalItemExpansion(
+                                    exportSelectionState,
+                                    signalItemId
+                                )
+                            },
+                            onSelectAllChanged = { selected ->
+                                exportSelectionState = SelectionStateManager.selectAll(
+                                    exportSelectionState,
+                                    selected
+                                )
+                            }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Selection Summary
+                        SelectionSummary(
+                            selectionState = exportSelectionState
+                        )
+                    } else {
+                        // Full Export UI
+                        Text(
+                            text = "Export all your signal items to a file for backup or sharing with other devices.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        Text(
+                            text = "Current signal items: ${signalItems.size}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     
-                    Text(
-                        text = "Current signal items: ${signalItems.size}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
+                    // Export Button
                     Button(
                         onClick = {
                             coroutineScope.launch {
                                 handleExport()
                             }
                         },
-                        enabled = !isExporting && !isImporting && signalItems.isNotEmpty(),
+                        enabled = !isExporting && !isImporting && signalItems.isNotEmpty() && 
+                                (!isSelectiveExportMode || exportSelectionState.hasSelection),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (isExporting) {
@@ -215,7 +304,13 @@ fun ExportImportScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text("Export to File")
+                        Text(
+                            if (isSelectiveExportMode) {
+                                "Export Selected Items"
+                            } else {
+                                "Export All Items"
+                            }
+                        )
                     }
                 }
             }

@@ -36,6 +36,64 @@ class ExportImportService {
         }
     }
     
+    /**
+     * Export selected SignalItems and TimeSlots based on selection state
+     */
+    fun exportSelectedSignalItems(
+        selectionState: ExportSelectionState,
+        version: String = "1.0",
+        appVersion: String = "1.0.0"
+    ): ExportResult {
+        return try {
+            if (!selectionState.hasSelection) {
+                return ExportResult.Error("No items selected for export")
+            }
+            
+            val selectedSignalItems = selectionState.selectedSignalItemsWithTimeSlots
+            
+            if (selectedSignalItems.isEmpty()) {
+                return ExportResult.Error("No valid items selected for export")
+            }
+            
+            val exportData = selectedSignalItems.toExportData(version, appVersion)
+            val jsonString = json.encodeToString(exportData)
+            ExportResult.Success(jsonString)
+        } catch (e: Exception) {
+            ExportResult.Error("Failed to export selected signal items: ${e.message}")
+        }
+    }
+    
+    /**
+     * Generate a filename for selective export with additional context
+     */
+    fun generateSelectiveFileName(selectionState: ExportSelectionState): String {
+        val timestamp = System.currentTimeMillis()
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(timestamp)
+        val selectedCount = selectionState.selectedItemCount
+        val totalCount = selectionState.signalItemSelections.size
+        
+        return if (selectedCount == totalCount) {
+            "weekly_signal_export_$date.weeklysignal"
+        } else {
+            "weekly_signal_export_${selectedCount}of${totalCount}_$date.weeklysignal"
+        }
+    }
+    
+    /**
+     * Get export summary information
+     */
+    fun getExportSummary(selectionState: ExportSelectionState): ExportSummary {
+        val selectedSignalItems = selectionState.selectedSignalItemsWithTimeSlots
+        val totalTimeSlots = selectedSignalItems.sumOf { it.timeSlots.size }
+        
+        return ExportSummary(
+            selectedSignalItemCount = selectedSignalItems.size,
+            totalSignalItemCount = selectionState.signalItemSelections.size,
+            selectedTimeSlotCount = totalTimeSlots,
+            totalTimeSlotCount = selectionState.signalItemSelections.sumOf { it.signalItem.timeSlots.size }
+        )
+    }
+    
     fun importSignalItems(jsonString: String): ImportResult {
         return try {
             val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
@@ -189,4 +247,27 @@ class ImportConflictResolver {
         
         return result
     }
+}
+
+/**
+ * Summary information for export operations
+ */
+data class ExportSummary(
+    val selectedSignalItemCount: Int,
+    val totalSignalItemCount: Int,
+    val selectedTimeSlotCount: Int,
+    val totalTimeSlotCount: Int
+) {
+    val isFullExport: Boolean
+        get() = selectedSignalItemCount == totalSignalItemCount
+    
+    val isPartialExport: Boolean
+        get() = !isFullExport
+    
+    val selectionPercentage: Float
+        get() = if (totalSignalItemCount > 0) {
+            (selectedSignalItemCount.toFloat() / totalSignalItemCount.toFloat()) * 100f
+        } else {
+            0f
+        }
 }
