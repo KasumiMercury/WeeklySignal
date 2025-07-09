@@ -3,7 +3,8 @@
     "allow": [
       "Bash(./gradlew:*)",
       "Bash(gradle:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__human-in-the-loop__ask_human"
     ],
     "deny": []
   }

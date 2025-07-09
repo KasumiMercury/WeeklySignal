@@ -15,18 +15,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 @Composable
 fun SignalItemCard(
     item: SignalItem,
     modifier: Modifier = Modifier,
-    onClick: (SignalItem) -> Unit = {}
+    onClick: (SignalItem) -> Unit = {},
+    showTime: Boolean = false,
+    cornerRadius: RoundedCornerShape = RoundedCornerShape(WeeklyGridConstants.CORNER_RADIUS)
 ) {
     Card(
         modifier = modifier
-            .width(120.dp)
-            .height(80.dp),
-        shape = RoundedCornerShape(8.dp),
+            .width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+            .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT),
+        shape = cornerRadius,
         colors = CardDefaults.cardColors(
             containerColor = Color(item.color),
             contentColor = Color.White
@@ -37,30 +40,32 @@ fun SignalItemCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = if (showTime) Arrangement.SpaceBetween else Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = item.getTruncatedName(10),
-                fontSize = 12.sp,
+                text = item.getTruncatedName(6),
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
             
-            Text(
-                text = if (item.timeSlots.isNotEmpty()) {
-                    item.timeSlots.first().getTimeDisplayText()
-                } else {
-                    "--:--"
-                },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                color = Color.White
-            )
+            if (showTime) {
+                Text(
+                    text = if (item.timeSlots.isNotEmpty()) {
+                        item.timeSlots.first().getTimeDisplayText()
+                    } else {
+                        "--:--"
+                    },
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = Color.White
+                )
+            }
         }
     }
 }
@@ -72,6 +77,6 @@ fun EmptyTimeSlot(
     Spacer(
         modifier = modifier
             .width(20.dp)
-            .height(80.dp)
+            .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
     )
 }

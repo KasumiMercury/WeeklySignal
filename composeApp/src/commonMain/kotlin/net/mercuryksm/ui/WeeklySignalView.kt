@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 data class UITimeSlot(
     val hour: Int,
@@ -122,21 +123,41 @@ private fun WeeklyGrid(
     Column {
         
         // Main content area
-        Row(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Fixed day label column
-            Column(
-                modifier = Modifier.width(60.dp)
+        Column {
+            // Time header row
+            Row(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Spacer to align with time header in TimeSlotColumn
-                Spacer(modifier = Modifier.height(40.dp))
+                // Day label header spacer
+                Spacer(modifier = Modifier.width(WeeklyGridConstants.DAY_LABEL_WIDTH))
                 
-                DayOfWeekJp.values().forEach { dayOfWeek ->
+                // Time headers
+                LazyRow(
+                    state = scrollState,
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(timeSlots) { timeSlot ->
+                        TimeSlotHeader(
+                            timeSlot = timeSlot,
+                            modifier = Modifier
+                                .width(if (timeSlot.hasItems) 120.dp else 20.dp)
+                                .height(WeeklyGridConstants.TIME_HEADER_HEIGHT)
+                        )
+                    }
+                }
+            }
+            
+            // Day rows with full-width dividers
+            DayOfWeekJp.values().forEach { dayOfWeek ->
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Day label
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(90.dp)
+                            .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+                            .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
                             .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center
                     ) {
@@ -148,28 +169,37 @@ private fun WeeklyGrid(
                         )
                     }
                     
-                    if (dayOfWeek != DayOfWeekJp.SUNDAY) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            thickness = 0.5.dp
-                        )
+                    // Day cells for all time slots
+                    LazyRow(
+                        state = scrollState,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(timeSlots) { timeSlot ->
+                            val currentTimeInMinutes = timeSlot.getTimeInMinutes()
+                            val itemsForThisSlot = items.filter { signalItem ->
+                                signalItem.timeSlots.any { ts ->
+                                    ts.dayOfWeek == dayOfWeek && ts.getTimeInMinutes() == currentTimeInMinutes
+                                }
+                            }
+                            
+                            DayCell(
+                                dayOfWeek = dayOfWeek,
+                                items = itemsForThisSlot,
+                                onItemClick = onItemClick,
+                                modifier = Modifier
+                                    .width(if (timeSlot.hasItems) 120.dp else 20.dp)
+                                    .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
+                            )
+                        }
                     }
                 }
-            }
-            
-            // Scrollable timeline
-            LazyRow(
-                state = scrollState,
-                horizontalArrangement = Arrangement.spacedBy(0.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(timeSlots) { timeSlot ->
-                    TimeSlotColumn(
-                        timeSlot = timeSlot,
-                        allItems = items,
-                        onItemClick = onItemClick
-                    )
-                }
+                
+                // Full-width horizontal divider after each day row
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    thickness = 0.5.dp
+                )
             }
         }
     }
