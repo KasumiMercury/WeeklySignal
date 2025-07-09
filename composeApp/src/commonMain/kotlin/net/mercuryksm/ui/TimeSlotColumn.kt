@@ -28,7 +28,7 @@ fun TimeSlotColumn(
     onItemClick: (SignalItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val width = if (timeSlot.hasItems) 120.dp else 40.dp
+    val width = if (timeSlot.hasItems) WeeklyGridConstants.SIGNAL_ITEM_WIDTH else WeeklyGridConstants.SPACER_WIDTH_PER_INTERVAL.dp
     val currentTimeInMinutes = timeSlot.getTimeInMinutes()
     
     Column(

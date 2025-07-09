@@ -20,25 +20,6 @@ import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.ui.WeeklyGridConstants
 
-data class UITimeSlot(
-    val hour: Int,
-    val minute: Int,
-    val hasItems: Boolean
-) {
-    fun getTimeInMinutes(): Int {
-        return hour * 60 + minute
-    }
-    
-    fun getDisplayText(): String {
-        return String.format("%02d:%02d", hour, minute)
-    }
-}
-
-sealed class TimeSlotItem {
-    data class TimeSlot(val uiTimeSlot: UITimeSlot) : TimeSlotItem()
-    data class Spacer(val width: Int, val startTime: Int) : TimeSlotItem() // width in dp, startTime in minutes
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklySignalView(
@@ -173,7 +154,7 @@ private fun WeeklyGrid(
                 when (timeSlotItem) {
                     is TimeSlotItem.TimeSlot -> {
                         Column(
-                            modifier = Modifier.width(120.dp)
+                            modifier = Modifier.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
                         ) {
                             // Time header
                             TimeSlotHeader(
@@ -207,9 +188,9 @@ private fun WeeklyGrid(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceEvenly
                                 ) {
-                                    val numMemoryMarks = (timeSlotItem.width / 40).coerceAtLeast(1)
+                                    val numMemoryMarks = (timeSlotItem.width / WeeklyGridConstants.SPACER_WIDTH_PER_INTERVAL).coerceAtLeast(1)
                                     repeat(numMemoryMarks) { index ->
-                                        val timeOffset = index * 15
+                                        val timeOffset = index * WeeklyGridConstants.TIME_INTERVAL_MINUTES
                                         val currentTime = timeSlotItem.startTime + timeOffset
                                         val hour = currentTime / 60
                                         val minute = currentTime % 60
@@ -218,7 +199,7 @@ private fun WeeklyGrid(
                                             // First mark shows time for longer gaps
                                             Text(
                                                 text = String.format("%02d:%02d", hour, minute),
-                                                fontSize = 8.sp,
+                                                fontSize = WeeklyGridConstants.TIME_LABEL_FONT_SIZE,
                                                 color = MaterialTheme.colorScheme.outline,
                                                 textAlign = TextAlign.Center
                                             )
@@ -226,7 +207,7 @@ private fun WeeklyGrid(
                                             // Other marks show memory line
                                             Text(
                                                 text = "|",
-                                                fontSize = 8.sp,
+                                                fontSize = WeeklyGridConstants.MEMORY_MARK_FONT_SIZE,
                                                 color = MaterialTheme.colorScheme.outline,
                                                 textAlign = TextAlign.Center
                                             )
@@ -275,50 +256,4 @@ private fun EmptyState() {
     }
 }
 
-private fun generateTimeSlotItems(allItems: List<SignalItem>): List<TimeSlotItem> {
-    val itemTimes = allItems.flatMap { signalItem ->
-        signalItem.timeSlots.map { it.getTimeInMinutes() }
-    }.toSet().sorted()
-    
-    if (itemTimes.isEmpty()) {
-        return emptyList()
-    }
-    
-    val minTime = itemTimes.minOrNull() ?: 0
-    val maxTime = itemTimes.maxOrNull() ?: 1440
-    
-    val timeSlotItems = mutableListOf<TimeSlotItem>()
-    var currentTime = minTime
-    
-    while (currentTime <= maxTime) {
-        val hour = currentTime / 60
-        val minute = currentTime % 60
-        val hasItems = itemTimes.contains(currentTime)
-        
-        if (hasItems) {
-            // Add the actual time slot
-            timeSlotItems.add(
-                TimeSlotItem.TimeSlot(
-                    UITimeSlot(hour, minute, true)
-                )
-            )
-            currentTime += 15
-        } else {
-            // Add memory marks for empty intervals
-            val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
-            val gapToNextItem = nextItemTime?.let { it - currentTime } ?: 15
-            
-            if (gapToNextItem >= 15) {
-                val memoryIntervals = (gapToNextItem / 15).coerceAtLeast(1)
-                val spacerWidth = memoryIntervals * 40
-                timeSlotItems.add(TimeSlotItem.Spacer(spacerWidth, currentTime))
-                currentTime += memoryIntervals * 15
-            } else {
-                currentTime += 15
-            }
-        }
-    }
-    
-    return timeSlotItems
-}
 
