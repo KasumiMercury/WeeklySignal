@@ -13,12 +13,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
-import net.mercuryksm.ui.TimeSlotItem
-import net.mercuryksm.ui.UITimeSlot
+import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotItem
+import net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot
 import net.mercuryksm.ui.WeeklyGridConstants
-import net.mercuryksm.ui.generateTimeSlotItems
+import net.mercuryksm.ui.weekly.components.timeslot.generateTimeSlotItems
 import net.mercuryksm.ui.weekly.components.DayCell
-import net.mercuryksm.ui.weekly.components.TimeSlotHeader
+import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotHeader
 
 @Composable
 fun WeeklyGrid(

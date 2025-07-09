@@ -1,4 +1,4 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly.components.timeslot
 
 data class UITimeSlot(
     val hour: Int,

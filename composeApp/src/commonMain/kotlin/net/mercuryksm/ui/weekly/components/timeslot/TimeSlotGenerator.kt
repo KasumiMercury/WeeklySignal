@@ -1,6 +1,7 @@
-package net.mercuryksm.ui
+package net.mercuryksm.ui.weekly.components.timeslot
 
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.WeeklyGridConstants
 
 fun generateTimeSlotItems(allItems: List<SignalItem>): List<TimeSlotItem> {
     val itemTimes = allItems.flatMap { signalItem ->
