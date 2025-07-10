@@ -13,12 +13,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.*
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportSelectionScreen(
-    exportImportViewModel: ExportImportViewModel = koinViewModel(),
+    exportImportViewModel: ExportImportViewModel = koinInject(),
     onBackPressed: () -> Unit,
     onExportSelected: (ExportSelectionState) -> Unit
 ) {

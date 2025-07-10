@@ -3,7 +3,7 @@ package net.mercuryksm.di
 import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.database.DatabaseServiceFactory
 import net.mercuryksm.data.ExportImportService
-import net.mercuryksm.data.FileOperationsService
+import net.mercuryksm.data.FileOperationsServiceFactory
 import net.mercuryksm.event.EventBus
 import net.mercuryksm.event.EventBusImpl
 import net.mercuryksm.notification.AlarmServiceFactory
@@ -28,6 +28,9 @@ val appModule = module {
     // Database
     single { DatabaseServiceFactory.create() }
     single { SignalRepository(get()) }
+    
+    // File Operations
+    single { FileOperationsServiceFactory.create() }
     
     // Export/Import Service
     single { ExportImportService() }

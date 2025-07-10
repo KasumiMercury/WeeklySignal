@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.mercuryksm.data.*
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,7 +22,7 @@ fun ImportSelectionScreen(
     onBackPressed: () -> Unit,
     onImportCompleted: (Result<Unit>) -> Unit
 ) {
-    val exportImportViewModel: ExportImportViewModel = koinViewModel()
+    val exportImportViewModel: ExportImportViewModel = koinInject()
     val existingItems by exportImportViewModel.signalItems.collectAsStateWithLifecycle()
     var selectionState by remember { mutableStateOf(ExportSelectionState()) }
     var showConflictDialog by remember { mutableStateOf(false) }

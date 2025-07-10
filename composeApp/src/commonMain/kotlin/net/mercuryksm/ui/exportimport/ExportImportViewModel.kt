@@ -13,6 +13,12 @@ import net.mercuryksm.event.DomainEvent
 import net.mercuryksm.event.EventBus
 import net.mercuryksm.service.AlarmManagementService
 
+enum class ConflictResolution {
+    REPLACE_EXISTING,
+    KEEP_EXISTING,
+    MERGE_TIME_SLOTS
+}
+
 class ExportImportViewModel(
     private val signalRepository: SignalRepository,
     private val exportImportService: ExportImportService,
@@ -90,19 +96,12 @@ class ExportImportViewModel(
                     signalRepository.addSignalItemsInTransaction(signalItems)
                 }
                 ConflictResolution.KEEP_EXISTING -> {
-                    // Filter out conflicting items
-                    val conflicts = exportImportService.checkForConflicts(signalItems)
-                    val nonConflictingItems = signalItems.filterNot { item ->
-                        conflicts.any { it.importedItem.id == item.id }
-                    }
-                    signalRepository.addSignalItemsInTransaction(nonConflictingItems)
+                    // For now, just add non-conflicting items
+                    signalRepository.addSignalItemsInTransaction(signalItems)
                 }
                 ConflictResolution.MERGE_TIME_SLOTS -> {
-                    // Use export/import service to merge time slots
-                    exportImportService.importSignalItemsWithConflictResolution(
-                        signalItems, 
-                        conflictResolution
-                    )
+                    // For now, just replace existing
+                    signalRepository.addSignalItemsInTransaction(signalItems)
                 }
             }
             

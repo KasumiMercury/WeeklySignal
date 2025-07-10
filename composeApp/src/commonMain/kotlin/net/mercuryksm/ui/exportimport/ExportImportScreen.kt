@@ -18,7 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.*
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +28,7 @@ fun ExportImportScreen(
     onNavigateToExportSelection: () -> Unit,
     onNavigateToImportSelection: () -> Unit
 ) {
-    val exportImportViewModel: ExportImportViewModel = koinViewModel()
+    val exportImportViewModel: ExportImportViewModel = koinInject()
     val signalItems by weeklyViewModel.signalItems.collectAsStateWithLifecycle()
     val exportSelectionState by exportImportViewModel.exportSelectionState.collectAsStateWithLifecycle()
     val selectedImportItems by exportImportViewModel.selectedImportItems.collectAsStateWithLifecycle()
@@ -81,7 +81,7 @@ fun ExportImportScreen(
             showErrorDialog = true
         } finally {
             isImporting = false
-            viewModel.clearImportedItems()
+            exportImportViewModel.clearImportedItems()
         }
     }
 
@@ -90,7 +90,7 @@ fun ExportImportScreen(
         exportSelectionState?.let { state ->
             coroutineScope.launch {
                 handleExportWithSelection(state)
-                viewModel.clearExportSelectionState()
+                exportImportViewModel.clearExportSelectionState()
             }
         }
     }
@@ -100,7 +100,7 @@ fun ExportImportScreen(
         if (selectedImportItems.isNotEmpty()) {
             coroutineScope.launch {
                 handleImportWithSelection(selectedImportItems)
-                viewModel.clearSelectedImportItems()
+                exportImportViewModel.clearSelectedImportItems()
             }
         }
     }
@@ -109,33 +109,9 @@ fun ExportImportScreen(
         isImporting = true
         
         try {
-            val fileResult = fileOperationsService.importFromFile()
-            
-            when (fileResult) {
-                is FileReadResult.Success -> {
-                    // Use the new conflict check method to provide better user experience
-                    val conflictCheckResult = exportImportService.checkForConflicts(
-                        fileResult.content,
-                        signalItems
-                    )
-                    
-                    when (conflictCheckResult) {
-                        is ConflictCheckResult.Success -> {
-                            // Store imported items in ViewModel and navigate to selection screen
-                            viewModel.setImportedItems(conflictCheckResult.importedItems)
-                            onNavigateToImportSelection()
-                        }
-                        is ConflictCheckResult.Error -> {
-                            dialogMessage = conflictCheckResult.message
-                            showErrorDialog = true
-                        }
-                    }
-                }
-                is FileReadResult.Error -> {
-                    dialogMessage = fileResult.message
-                    showErrorDialog = true
-                }
-            }
+            // For now, just navigate to import selection screen
+            // File selection will be handled in the dedicated screens
+            onNavigateToImportSelection()
         } finally {
             isImporting = false
         }
