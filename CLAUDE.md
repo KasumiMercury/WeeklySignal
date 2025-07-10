@@ -421,3 +421,59 @@ object WeeklyGridConstants {
 - **Integration Tests**: Room database operations with in-memory database
 - **UI Testing**: Export/import flow testing with mock data
 - **Transaction Testing**: Database transaction rollback verification
+
+## Recent Bug Fixes and Improvements
+
+### Import Functionality UNIQUE Constraint Fix (2025-01-10)
+**Issue**: Import operations were failing with "UNIQUE constraint failed: signal.id" errors due to incorrect conflict resolution logic.
+
+**Root Cause**: 
+- `ImportConflictResolver.resolveConflicts()` was returning ALL items (existing + imported) as a single list
+- The ViewModel was attempting to INSERT all items, causing UNIQUE constraint violations for existing items
+- No distinction between items that needed to be inserted vs. updated
+
+**Solution Implemented**:
+
+#### 1. Enhanced ImportConflictResolver Architecture
+- **New Return Type**: Created `ImportConflictResolutionResult` data class with separate `itemsToInsert` and `itemsToUpdate` lists
+- **Improved Logic**: Each conflict resolution strategy now properly separates operations:
+  - **Replace Existing**: Conflicting items go to `itemsToUpdate` (full replacement of SignalItem and TimeSlots)
+  - **Keep Existing**: Conflicting items are skipped entirely (not added to either list)
+  - **Merge Time Slots**: Conflicting items go to `itemsToUpdate` with merged TimeSlots (preserves existing SignalItem settings, adds only missing TimeSlots)
+
+#### 2. Database Layer Enhancements
+- **New Method**: Added `importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)` to `SignalDatabaseService` interface
+- **Platform Implementations**: Updated both `AndroidSignalDatabaseService` and `DesktopSignalDatabaseService` with proper INSERT/UPDATE separation
+- **Transaction Safety**: Ensures atomic operations with automatic rollback on failure
+
+#### 3. Repository Layer Updates
+- **New Method**: Added `importSignalItemsWithConflictResolution()` to `SignalRepository` 
+- **State Management**: Properly handles both insertion of new items and updates to existing items in the reactive StateFlow
+
+#### 4. ViewModel and UI Flow Updates
+- **Updated Signature**: Changed `importSignalItemsWithConflictResolution()` to accept separate insert/update lists
+- **State Management**: Replaced `selectedImportItems: StateFlow<List<SignalItem>>` with `selectedImportResult: StateFlow<ImportConflictResolutionResult?>`
+- **Navigation Updates**: Updated `NavGraph.kt` and UI components to handle the new conflict resolution result type
+
+#### 5. Files Modified
+- `ExportImportService.kt`: Enhanced conflict resolution logic and result types
+- `SignalDatabaseService.kt`: Added new import method interface
+- `AndroidSignalDatabaseService.kt`: Implemented new import method
+- `DesktopSignalDatabaseService.kt`: Implemented new import method  
+- `SignalRepository.kt`: Added repository-level import method
+- `WeeklySignalViewModel.kt`: Updated import handling and state management
+- `ImportSelectionScreen.kt`: Updated to use new result types
+- `ExportImportScreen.kt`: Updated import flow handling
+- `NavGraph.kt`: Updated navigation to handle new types
+
+**Result**: 
+- ✅ All three conflict resolution strategies now work correctly
+- ✅ No more UNIQUE constraint violations during import
+- ✅ Proper separation of INSERT vs UPDATE database operations
+- ✅ Transaction safety maintained with automatic rollback on failures
+- ✅ IDs are never modified (as specified in requirements)
+
+**Testing Verified**: 
+- Replace Existing: Overwrites SignalItem settings and TimeSlots completely
+- Keep Existing: Preserves current SignalItems, skips conflicting imports
+- Merge Time Slots: Keeps existing SignalItem settings, adds only new TimeSlots
