@@ -18,18 +18,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.*
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportImportScreen(
-    viewModel: WeeklySignalViewModel,
+    weeklyViewModel: WeeklySignalViewModel,
     onBackPressed: () -> Unit,
     onNavigateToExportSelection: () -> Unit,
     onNavigateToImportSelection: () -> Unit
 ) {
-    val signalItems by viewModel.signalItems.collectAsStateWithLifecycle()
-    val exportSelectionState by viewModel.exportSelectionState.collectAsStateWithLifecycle()
-    val selectedImportItems by viewModel.selectedImportItems.collectAsStateWithLifecycle()
+    val exportImportViewModel: ExportImportViewModel = koinViewModel()
+    val signalItems by weeklyViewModel.signalItems.collectAsStateWithLifecycle()
+    val exportSelectionState by exportImportViewModel.exportSelectionState.collectAsStateWithLifecycle()
+    val selectedImportItems by exportImportViewModel.selectedImportItems.collectAsStateWithLifecycle()
     
     var isExporting by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
@@ -38,40 +40,20 @@ fun ExportImportScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
     
-    val exportImportService = remember { ExportImportService() }
     val coroutineScope = rememberCoroutineScope()
-    
-    // Create file operations service based on platform
-    val fileOperationsService = rememberFileOperationsService()
     
     suspend fun handleExportWithSelection(selectionState: ExportSelectionState) {
         isExporting = true
         
         try {
-            val exportResult = exportImportService.exportSelectedSignalItems(selectionState)
+            val result = exportImportViewModel.exportSelectedItems()
             
-            when (exportResult) {
-                is ExportResult.Success -> {
-                    val fileName = exportImportService.generateSelectiveFileName(selectionState)
-                    val fileResult = fileOperationsService.exportToFile(exportResult.exportData, fileName)
-                    
-                    when (fileResult) {
-                        is FileOperationResult.Success -> {
-                            val exportSummary = exportImportService.getExportSummary(selectionState)
-                            val summaryMessage = "Successfully exported ${exportSummary.selectedSignalItemCount} signal items with ${exportSummary.selectedTimeSlotCount} time slots"
-                            dialogMessage = "$summaryMessage\n\n${fileResult.message}"
-                            showSuccessDialog = true
-                        }
-                        is FileOperationResult.Error -> {
-                            dialogMessage = fileResult.message
-                            showErrorDialog = true
-                        }
-                    }
-                }
-                is ExportResult.Error -> {
-                    dialogMessage = exportResult.message
-                    showErrorDialog = true
-                }
+            result.onSuccess { fileName ->
+                dialogMessage = "Successfully exported to $fileName"
+                showSuccessDialog = true
+            }.onFailure { error ->
+                dialogMessage = "Failed to export: ${error.message}"
+                showErrorDialog = true
             }
         } finally {
             isExporting = false
@@ -83,7 +65,7 @@ fun ExportImportScreen(
         
         try {
             // Use transaction-based import method for better reliability
-            viewModel.importSignalItemsWithConflictResolution(selectedItems) { result ->
+            exportImportViewModel.importSignalItemsWithConflictResolution(selectedItems) { result ->
                 coroutineScope.launch {
                     result.onSuccess {
                         dialogMessage = "Successfully imported ${selectedItems.size} signal items"

@@ -11,16 +11,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.mercuryksm.data.*
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportSelectionScreen(
     importedItems: List<SignalItem>,
-    existingItems: List<SignalItem>,
     onBackPressed: () -> Unit,
-    onImportSelected: (List<SignalItem>) -> Unit
+    onImportCompleted: (Result<Unit>) -> Unit
 ) {
+    val exportImportViewModel: ExportImportViewModel = koinViewModel()
+    val existingItems by exportImportViewModel.signalItems.collectAsStateWithLifecycle()
     var selectionState by remember { mutableStateOf(ExportSelectionState()) }
     var showConflictDialog by remember { mutableStateOf(false) }
     
@@ -102,7 +105,12 @@ fun ImportSelectionScreen(
                             if (conflicts.isNotEmpty()) {
                                 showConflictDialog = true
                             } else {
-                                onImportSelected(selectionState.selectedSignalItemsWithTimeSlots)
+                                exportImportViewModel.importSignalItemsWithConflictResolution(
+                                    selectionState.selectedSignalItemsWithTimeSlots,
+                                    ConflictResolution.REPLACE_EXISTING
+                                ) { result ->
+                                    onImportCompleted(result)
+                                }
                             }
                         },
                         enabled = selectionState.hasSelection,
@@ -234,13 +242,12 @@ fun ImportSelectionScreen(
                         TextButton(
                             onClick = {
                                 showConflictDialog = false
-                                val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
-                                    existingItems,
-                                    selectedItems,
+                                exportImportViewModel.importSignalItemsWithConflictResolution(
+                                    selectionState.selectedSignalItemsWithTimeSlots,
                                     ConflictResolution.REPLACE_EXISTING
-                                )
-                                onImportSelected(resolvedItems)
+                                ) { result ->
+                                    onImportCompleted(result)
+                                }
                             }
                         ) {
                             Text("Replace Existing")
@@ -249,13 +256,12 @@ fun ImportSelectionScreen(
                         TextButton(
                             onClick = {
                                 showConflictDialog = false
-                                val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
-                                    existingItems,
-                                    selectedItems,
+                                exportImportViewModel.importSignalItemsWithConflictResolution(
+                                    selectionState.selectedSignalItemsWithTimeSlots,
                                     ConflictResolution.KEEP_EXISTING
-                                )
-                                onImportSelected(resolvedItems)
+                                ) { result ->
+                                    onImportCompleted(result)
+                                }
                             }
                         ) {
                             Text("Keep Existing")
@@ -268,13 +274,12 @@ fun ImportSelectionScreen(
                         TextButton(
                             onClick = {
                                 showConflictDialog = false
-                                val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
-                                    existingItems,
-                                    selectedItems,
+                                exportImportViewModel.importSignalItemsWithConflictResolution(
+                                    selectionState.selectedSignalItemsWithTimeSlots,
                                     ConflictResolution.MERGE_TIME_SLOTS
-                                )
-                                onImportSelected(resolvedItems)
+                                ) { result ->
+                                    onImportCompleted(result)
+                                }
                             }
                         ) {
                             Text("Merge Time Slots")

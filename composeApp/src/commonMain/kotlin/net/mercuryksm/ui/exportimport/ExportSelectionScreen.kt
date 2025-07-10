@@ -13,16 +13,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.*
-import net.mercuryksm.ui.weekly.WeeklySignalViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportSelectionScreen(
-    viewModel: WeeklySignalViewModel,
+    exportImportViewModel: ExportImportViewModel = koinViewModel(),
     onBackPressed: () -> Unit,
     onExportSelected: (ExportSelectionState) -> Unit
 ) {
-    val signalItems by viewModel.signalItems.collectAsStateWithLifecycle()
+    val signalItems by exportImportViewModel.signalItems.collectAsStateWithLifecycle()
     
     var selectionState by remember { mutableStateOf(ExportSelectionState()) }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -205,6 +205,7 @@ fun ExportSelectionScreen(
                 TextButton(
                     onClick = {
                         showConfirmDialog = false
+                        exportImportViewModel.setExportSelectionState(selectionState)
                         onExportSelected(selectionState)
                     }
                 ) {
