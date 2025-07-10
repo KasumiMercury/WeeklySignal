@@ -24,230 +24,58 @@ sealed class ConflictCheckResult {
     data class Error(val message: String) : ConflictCheckResult()
 }
 
+/**
+ * Facade service that coordinates export and import operations.
+ * Delegates specific responsibilities to specialized services.
+ * 
+ * @deprecated This class will be removed in future versions.
+ * Use ExportService, ImportService, and ConflictResolutionService directly.
+ */
+@Deprecated("Use specialized services instead", ReplaceWith("ExportService, ImportService, ConflictResolutionService"))
 class ExportImportService {
     
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-    }
+    private val exportService = ExportService()
+    private val importService = ImportService()
     
+    // Delegate to ExportService
     fun exportSignalItems(
         signalItems: List<SignalItem>,
         version: String = "1.0",
         appVersion: String = "1.0.0"
-    ): ExportResult {
-        return try {
-            val exportData = signalItems.toExportData(version, appVersion)
-            val jsonString = json.encodeToString(exportData)
-            ExportResult.Success(jsonString)
-        } catch (e: Exception) {
-            ExportResult.Error("Failed to export signal items: ${e.message}")
-        }
-    }
+    ): ExportResult = exportService.exportSignalItems(signalItems, version, appVersion)
     
-    /**
-     * Export selected SignalItems and TimeSlots based on selection state
-     */
     fun exportSelectedSignalItems(
         selectionState: ExportSelectionState,
         version: String = "1.0",
         appVersion: String = "1.0.0"
-    ): ExportResult {
-        return try {
-            if (!selectionState.hasSelection) {
-                return ExportResult.Error("No items selected for export")
-            }
-            
-            val selectedSignalItems = selectionState.selectedSignalItemsWithTimeSlots
-            
-            if (selectedSignalItems.isEmpty()) {
-                return ExportResult.Error("No valid items selected for export")
-            }
-            
-            val exportData = selectedSignalItems.toExportData(version, appVersion)
-            val jsonString = json.encodeToString(exportData)
-            ExportResult.Success(jsonString)
-        } catch (e: Exception) {
-            ExportResult.Error("Failed to export selected signal items: ${e.message}")
-        }
-    }
+    ): ExportResult = exportService.exportSelectedSignalItems(selectionState, version, appVersion)
     
-    /**
-     * Generate a filename for selective export with additional context
-     */
-    fun generateSelectiveFileName(selectionState: ExportSelectionState): String {
-        val timestamp = System.currentTimeMillis()
-        val date = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(timestamp)
-        val selectedCount = selectionState.selectedItemCount
-        val totalCount = selectionState.signalItemSelections.size
-        
-        return if (selectedCount == totalCount) {
-            "weekly_signal_export_$date.weeklysignal"
-        } else {
-            "weekly_signal_export_${selectedCount}of${totalCount}_$date.weeklysignal"
-        }
-    }
+    fun generateSelectiveFileName(selectionState: ExportSelectionState): String = 
+        exportService.generateSelectiveFileName(selectionState)
     
-    /**
-     * Get export summary information
-     */
-    fun getExportSummary(selectionState: ExportSelectionState): ExportSummary {
-        val selectedSignalItems = selectionState.selectedSignalItemsWithTimeSlots
-        val totalTimeSlots = selectedSignalItems.sumOf { it.timeSlots.size }
-        
-        return ExportSummary(
-            selectedSignalItemCount = selectedSignalItems.size,
-            totalSignalItemCount = selectionState.signalItemSelections.size,
-            selectedTimeSlotCount = totalTimeSlots,
-            totalTimeSlotCount = selectionState.signalItemSelections.sumOf { it.signalItem.timeSlots.size }
-        )
-    }
+    fun getExportSummary(selectionState: ExportSelectionState): ExportSummary = 
+        exportService.getExportSummary(selectionState)
     
-    fun importSignalItems(jsonString: String): ImportResult {
-        return try {
-            val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
-            
-            // Validate the imported data
-            val validationResult = validateImportData(exportData)
-            if (validationResult != null) {
-                return ImportResult.Error(validationResult)
-            }
-            
-            val signalItems = exportData.toSignalItems()
-            ImportResult.Success(signalItems)
-        } catch (e: Exception) {
-            ImportResult.Error("Failed to import signal items: ${e.message}")
-        }
-    }
+    fun generateFileName(): String = exportService.generateFileName()
     
-    /**
-     * Import SignalItems with conflict resolution
-     */
+    fun isValidExportFile(fileName: String): Boolean = exportService.isValidExportFile(fileName)
+    
+    // Delegate to ImportService
+    fun importSignalItems(jsonString: String): ImportResult = 
+        importService.importSignalItems(jsonString)
+    
     fun importSignalItemsWithConflictResolution(
         jsonString: String,
         existingSignalItems: List<SignalItem>,
         conflictResolution: ConflictResolution
-    ): ImportResult {
-        return try {
-            val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
-            
-            // Validate the imported data
-            val validationResult = validateImportData(exportData)
-            if (validationResult != null) {
-                return ImportResult.Error(validationResult)
-            }
-            
-            val importedSignalItems = exportData.toSignalItems()
-            val conflictResolver = ImportConflictResolver()
-            
-            // Resolve conflicts
-            val resolvedSignalItems = conflictResolver.resolveConflicts(
-                existingSignalItems,
-                importedSignalItems,
-                conflictResolution
-            )
-            
-            ImportResult.Success(resolvedSignalItems)
-        } catch (e: Exception) {
-            ImportResult.Error("Failed to import signal items with conflict resolution: ${e.message}")
-        }
-    }
+    ): ImportConflictResolutionResult? = 
+        importService.importSignalItemsWithConflictResolution(jsonString, existingSignalItems, conflictResolution)
     
-    /**
-     * Check for conflicts between existing and imported SignalItems
-     */
     fun checkForConflicts(
         jsonString: String,
         existingSignalItems: List<SignalItem>
-    ): ConflictCheckResult {
-        return try {
-            val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
-            
-            // Validate the imported data
-            val validationResult = validateImportData(exportData)
-            if (validationResult != null) {
-                return ConflictCheckResult.Error(validationResult)
-            }
-            
-            val importedSignalItems = exportData.toSignalItems()
-            val conflictResolver = ImportConflictResolver()
-            
-            // Find conflicts
-            val conflictingItems = conflictResolver.findConflicts(existingSignalItems, importedSignalItems)
-            
-            ConflictCheckResult.Success(
-                importedItems = importedSignalItems,
-                conflictingItems = conflictingItems,
-                hasConflicts = conflictingItems.isNotEmpty()
-            )
-        } catch (e: Exception) {
-            ConflictCheckResult.Error("Failed to check for conflicts: ${e.message}")
-        }
-    }
-    
-    private fun validateImportData(exportData: WeeklySignalExportData): String? {
-        // Validate version compatibility
-        if (exportData.version.isEmpty()) {
-            return "Invalid export format: missing version"
-        }
-        
-        // Validate signal items
-        exportData.signalItems.forEach { signalItem ->
-            if (signalItem.id.isEmpty()) {
-                return "Invalid signal item: missing ID"
-            }
-            
-            if (signalItem.name.isEmpty()) {
-                return "Invalid signal item: missing name"
-            }
-            
-            if (signalItem.timeSlots.isEmpty()) {
-                return "Invalid signal item '${signalItem.name}': must have at least one time slot"
-            }
-            
-            // Validate time slots
-            signalItem.timeSlots.forEach { timeSlot ->
-                if (timeSlot.id.isEmpty()) {
-                    return "Invalid time slot: missing ID"
-                }
-                
-                if (timeSlot.hour !in 0..23) {
-                    return "Invalid time slot in '${signalItem.name}': hour must be between 0 and 23"
-                }
-                
-                if (timeSlot.minute !in 0..59) {
-                    return "Invalid time slot in '${signalItem.name}': minute must be between 0 and 59"
-                }
-                
-                if (timeSlot.dayOfWeek !in 0..6) {
-                    return "Invalid time slot in '${signalItem.name}': day of week must be between 0 and 6"
-                }
-            }
-        }
-        
-        // Check for duplicate IDs
-        val signalItemIds = exportData.signalItems.map { it.id }
-        if (signalItemIds.size != signalItemIds.distinct().size) {
-            return "Duplicate signal item IDs found in export data"
-        }
-        
-        val timeSlotIds = exportData.signalItems.flatMap { it.timeSlots.map { ts -> ts.id } }
-        if (timeSlotIds.size != timeSlotIds.distinct().size) {
-            return "Duplicate time slot IDs found in export data"
-        }
-        
-        return null
-    }
-    
-    fun generateFileName(): String {
-        val timestamp = System.currentTimeMillis()
-        val date = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(timestamp)
-        return "weekly_signal_export_$date.weeklysignal"
-    }
-    
-    fun isValidExportFile(fileName: String): Boolean {
-        return fileName.endsWith(".weeklysignal")
-    }
+    ): ConflictCheckResult = 
+        importService.checkForConflicts(jsonString, existingSignalItems)
 }
 
 data class ImportConflictResolution(
@@ -261,65 +89,31 @@ enum class ConflictResolution {
     MERGE_TIME_SLOTS
 }
 
+data class ImportConflictResolutionResult(
+    val itemsToInsert: List<SignalItem>,
+    val itemsToUpdate: List<SignalItem>
+)
+
+/**
+ * @deprecated Use ConflictResolutionService instead
+ */
+@Deprecated("Use ConflictResolutionService instead", ReplaceWith("ConflictResolutionService"))
 class ImportConflictResolver {
+    private val conflictResolutionService = ConflictResolutionService()
     
     fun findConflicts(
         existingSignalItems: List<SignalItem>,
         importedSignalItems: List<SignalItem>
     ): List<SignalItem> {
-        val existingIds = existingSignalItems.map { it.id }.toSet()
-        return importedSignalItems.filter { it.id in existingIds }
+        return conflictResolutionService.findConflicts(existingSignalItems, importedSignalItems)
     }
     
     fun resolveConflicts(
         existingSignalItems: List<SignalItem>,
         importedSignalItems: List<SignalItem>,
         conflictResolution: ConflictResolution
-    ): List<SignalItem> {
-        val existingMap = existingSignalItems.associateBy { it.id }
-        val importedMap = importedSignalItems.associateBy { it.id }
-        
-        val result = mutableListOf<SignalItem>()
-        
-        // Add all existing items first
-        result.addAll(existingSignalItems)
-        
-        // Process imported items
-        importedSignalItems.forEach { importedItem ->
-            val existingItem = existingMap[importedItem.id]
-            
-            if (existingItem == null) {
-                // New item, add it
-                result.add(importedItem)
-            } else {
-                // Conflict, resolve based on strategy
-                when (conflictResolution) {
-                    ConflictResolution.REPLACE_EXISTING -> {
-                        // Replace the existing item
-                        result.removeAll { it.id == importedItem.id }
-                        result.add(importedItem)
-                    }
-                    ConflictResolution.KEEP_EXISTING -> {
-                        // Keep existing, do nothing
-                    }
-                    ConflictResolution.MERGE_TIME_SLOTS -> {
-                        // Merge time slots
-                        val existingTimeSlotIds = existingItem.timeSlots.map { it.id }.toSet()
-                        val newTimeSlots = importedItem.timeSlots.filter { it.id !in existingTimeSlotIds }
-                        
-                        if (newTimeSlots.isNotEmpty()) {
-                            val mergedItem = existingItem.copy(
-                                timeSlots = existingItem.timeSlots + newTimeSlots
-                            )
-                            result.removeAll { it.id == importedItem.id }
-                            result.add(mergedItem)
-                        }
-                    }
-                }
-            }
-        }
-        
-        return result
+    ): ImportConflictResolutionResult {
+        return conflictResolutionService.resolveConflicts(existingSignalItems, importedSignalItems, conflictResolution)
     }
 }
 

@@ -252,6 +252,42 @@ object WeeklyGridConstants {
 3. **Fallback Behavior**: Loads sample data only when database is empty (first run)
 4. **Type-Safe Operations**: Room DAO interfaces with compile-time SQL validation
 5. **Transaction Support**: Batch operations with `addSignalItemsInTransaction()`, `updateSignalItemsInTransaction()`, and `deleteSignalItemsInTransaction()` for atomic import/update operations with automatic rollback on failure
+   - **✅ ACID Transaction Implementation**: Room KMP 2.7.2 `@Transaction` annotated DAO methods provide true ACID transaction semantics
+   - **DAO-Level Transactions**: SignalDao includes `@Transaction` methods for `insertSignalWithTimeSlots()`, `updateSignalWithTimeSlots()`, `deleteSignalWithTimeSlots()`, and batch operations
+   - **Automatic Rollback**: Database operations within `@Transaction` methods automatically rollback on any failure, ensuring data consistency
+
+### Room KMP Transaction Implementation Details
+
+The WeeklySignal app implements proper ACID transactions using Room KMP 2.7.2's `@Transaction` annotation:
+
+#### Transaction Methods in SignalDao
+- **`insertSignalWithTimeSlots()`**: Atomically inserts a SignalItem with all its TimeSlots
+- **`updateSignalWithTimeSlots()`**: Atomically updates a SignalItem and replaces all its TimeSlots
+- **`deleteSignalWithTimeSlots()`**: Atomically deletes a SignalItem and all related TimeSlots
+- **`insertMultipleSignalsWithTimeSlots()`**: Batch insert multiple SignalItems with their TimeSlots
+- **`updateMultipleSignalsWithTimeSlots()`**: Batch update multiple SignalItems with their TimeSlots
+
+#### ACID Properties Guaranteed
+- **Atomicity**: All operations within a `@Transaction` method succeed or fail together
+- **Consistency**: Foreign key constraints and data integrity maintained across operations
+- **Isolation**: Concurrent operations don't interfere with transaction execution
+- **Durability**: Committed transactions survive system failures
+
+#### Implementation Pattern
+```kotlin
+@Transaction
+suspend fun insertSignalWithTimeSlots(
+    signal: SignalEntity,
+    timeSlots: List<TimeSlotEntity>
+) {
+    insert(signal)
+    timeSlots.forEach { timeSlot ->
+        insertTimeSlot(timeSlot)
+    }
+}
+```
+
+This approach ensures data consistency during complex operations like import/export, batch updates, and conflict resolution.
 
 ## Development Notes
 
@@ -270,7 +306,7 @@ object WeeklyGridConstants {
 - **Multiple Items Display**: Use MultipleSignalItemsCell for adaptive display based on item count
 - **UI Dimension Changes**: Modify Constants.kt for consistent styling across all components
 - **Export/Import Errors**: Check file permissions and available storage space
-- **Database Transaction Issues**: Ensure all database operations use transaction methods for consistency
+- **Database Transaction Implementation**: Uses Room KMP 2.7.2 `@Transaction` annotated DAO methods for ACID transaction guarantees
 - **Conflict Resolution**: Use appropriate conflict resolution strategy based on user requirements
 
 ## Key Implementation Insights
@@ -421,3 +457,59 @@ object WeeklyGridConstants {
 - **Integration Tests**: Room database operations with in-memory database
 - **UI Testing**: Export/import flow testing with mock data
 - **Transaction Testing**: Database transaction rollback verification
+
+## Recent Bug Fixes and Improvements
+
+### Import Functionality UNIQUE Constraint Fix (2025-01-10)
+**Issue**: Import operations were failing with "UNIQUE constraint failed: signal.id" errors due to incorrect conflict resolution logic.
+
+**Root Cause**: 
+- `ImportConflictResolver.resolveConflicts()` was returning ALL items (existing + imported) as a single list
+- The ViewModel was attempting to INSERT all items, causing UNIQUE constraint violations for existing items
+- No distinction between items that needed to be inserted vs. updated
+
+**Solution Implemented**:
+
+#### 1. Enhanced ImportConflictResolver Architecture
+- **New Return Type**: Created `ImportConflictResolutionResult` data class with separate `itemsToInsert` and `itemsToUpdate` lists
+- **Improved Logic**: Each conflict resolution strategy now properly separates operations:
+  - **Replace Existing**: Conflicting items go to `itemsToUpdate` (full replacement of SignalItem and TimeSlots)
+  - **Keep Existing**: Conflicting items are skipped entirely (not added to either list)
+  - **Merge Time Slots**: Conflicting items go to `itemsToUpdate` with merged TimeSlots (preserves existing SignalItem settings, adds only missing TimeSlots)
+
+#### 2. Database Layer Enhancements
+- **New Method**: Added `importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)` to `SignalDatabaseService` interface
+- **Platform Implementations**: Updated both `AndroidSignalDatabaseService` and `DesktopSignalDatabaseService` with proper INSERT/UPDATE separation
+- **Transaction Safety**: Ensures atomic operations with automatic rollback on failure
+
+#### 3. Repository Layer Updates
+- **New Method**: Added `importSignalItemsWithConflictResolution()` to `SignalRepository` 
+- **State Management**: Properly handles both insertion of new items and updates to existing items in the reactive StateFlow
+
+#### 4. ViewModel and UI Flow Updates
+- **Updated Signature**: Changed `importSignalItemsWithConflictResolution()` to accept separate insert/update lists
+- **State Management**: Replaced `selectedImportItems: StateFlow<List<SignalItem>>` with `selectedImportResult: StateFlow<ImportConflictResolutionResult?>`
+- **Navigation Updates**: Updated `NavGraph.kt` and UI components to handle the new conflict resolution result type
+
+#### 5. Files Modified
+- `ExportImportService.kt`: Enhanced conflict resolution logic and result types
+- `SignalDatabaseService.kt`: Added new import method interface
+- `AndroidSignalDatabaseService.kt`: Implemented new import method
+- `DesktopSignalDatabaseService.kt`: Implemented new import method  
+- `SignalRepository.kt`: Added repository-level import method
+- `WeeklySignalViewModel.kt`: Updated import handling and state management
+- `ImportSelectionScreen.kt`: Updated to use new result types
+- `ExportImportScreen.kt`: Updated import flow handling
+- `NavGraph.kt`: Updated navigation to handle new types
+
+**Result**: 
+- ✅ All three conflict resolution strategies now work correctly
+- ✅ No more UNIQUE constraint violations during import
+- ✅ Proper separation of INSERT vs UPDATE database operations
+- ✅ Transaction safety maintained with automatic rollback on failures
+- ✅ IDs are never modified (as specified in requirements)
+
+**Testing Verified**: 
+- Replace Existing: Overwrites SignalItem settings and TimeSlots completely
+- Keep Existing: Preserves current SignalItems, skips conflicting imports
+- Merge Time Slots: Keeps existing SignalItem settings, adds only new TimeSlots

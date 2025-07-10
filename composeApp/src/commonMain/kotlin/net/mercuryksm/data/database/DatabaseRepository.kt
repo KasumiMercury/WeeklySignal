@@ -22,4 +22,10 @@ interface DatabaseRepository {
     suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String)
     suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean)
     suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long)
+    
+    // Transaction support using Room KMP 2.7.2 API
+    suspend fun <T> withTransaction(block: suspend () -> T): T
+    
+    // DAO access for @Transaction methods
+    fun getSignalDao(): SignalDao
 }

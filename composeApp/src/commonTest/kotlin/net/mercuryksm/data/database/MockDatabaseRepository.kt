@@ -55,4 +55,61 @@ class MockDatabaseRepository : DatabaseRepository {
         signals.clear()
         timeSlots.clear()
     }
+    
+    // Alarm state management methods - minimal implementation for testing
+    override suspend fun insertOrUpdateAlarmState(alarmState: AlarmStateEntity) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun getAlarmStateByTimeSlotId(timeSlotId: String): AlarmStateEntity? {
+        return null
+    }
+    
+    override suspend fun getAlarmStatesBySignalItemId(signalItemId: String): List<AlarmStateEntity> {
+        return emptyList()
+    }
+    
+    override suspend fun getAllScheduledAlarmStates(): List<AlarmStateEntity> {
+        return emptyList()
+    }
+    
+    override suspend fun deleteAlarmState(timeSlotId: String) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun <T> withTransaction(block: suspend () -> T): T {
+        // Mock implementation - simulates transaction by executing the block
+        // In a real test environment, this could track transaction calls
+        return block()
+    }
+    
+    override fun getSignalDao(): SignalDao {
+        // Mock implementation - return a mock DAO
+        return object : SignalDao {
+            override suspend fun insert(signal: SignalEntity): Long = 1L
+            override suspend fun update(signal: SignalEntity) {}
+            override suspend fun delete(signalId: String) {}
+            override suspend fun getById(signalId: String): SignalEntity? = null
+            override suspend fun getAll(): List<SignalEntity> = emptyList()
+            override suspend fun insertSignalWithTimeSlots(signal: SignalEntity, timeSlots: List<TimeSlotEntity>) {}
+            override suspend fun updateSignalWithTimeSlots(signal: SignalEntity, timeSlots: List<TimeSlotEntity>) {}
+            override suspend fun deleteSignalWithTimeSlots(signalId: String) {}
+            override suspend fun insertMultipleSignalsWithTimeSlots(signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>) {}
+            override suspend fun updateMultipleSignalsWithTimeSlots(signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>) {}
+            override suspend fun insertTimeSlot(timeSlot: TimeSlotEntity): Long = 1L
+            override suspend fun deleteTimeSlotsBySignalId(signalId: String) {}
+        }
+    }
 }

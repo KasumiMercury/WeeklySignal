@@ -182,6 +182,44 @@ class SignalRepository(
         }
     }
     
+    suspend fun importSignalItemsWithConflictResolution(
+        itemsToInsert: List<SignalItem>,
+        itemsToUpdate: List<SignalItem>
+    ): Result<Unit> {
+        return try {
+            _isLoading.value = true
+            
+            val result = if (databaseService != null) {
+                databaseService.importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)
+            } else {
+                Result.success(Unit)
+            }
+            
+            if (result.isSuccess) {
+                val currentItems = _signalItems.value.toMutableList()
+                
+                // Add new items
+                currentItems.addAll(itemsToInsert)
+                
+                // Update existing items
+                itemsToUpdate.forEach { updatedItem ->
+                    val index = currentItems.indexOfFirst { it.id == updatedItem.id }
+                    if (index != -1) {
+                        currentItems[index] = updatedItem
+                    }
+                }
+                
+                _signalItems.value = currentItems
+            }
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
     suspend fun refreshFromDatabase(): Result<Unit> {
         return try {
             _isLoading.value = true

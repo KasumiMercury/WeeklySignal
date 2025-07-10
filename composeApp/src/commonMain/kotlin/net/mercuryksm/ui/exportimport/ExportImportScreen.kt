@@ -29,7 +29,7 @@ fun ExportImportScreen(
 ) {
     val signalItems by viewModel.signalItems.collectAsStateWithLifecycle()
     val exportSelectionState by viewModel.exportSelectionState.collectAsStateWithLifecycle()
-    val selectedImportItems by viewModel.selectedImportItems.collectAsStateWithLifecycle()
+    val selectedImportResult by viewModel.selectedImportResult.collectAsStateWithLifecycle()
     
     var isExporting by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
@@ -78,15 +78,19 @@ fun ExportImportScreen(
         }
     }
     
-    suspend fun handleImportWithSelection(selectedItems: List<SignalItem>) {
+    suspend fun handleImportWithSelection(result: ImportConflictResolutionResult) {
         isImporting = true
         
         try {
             // Use transaction-based import method for better reliability
-            viewModel.importSignalItemsWithConflictResolution(selectedItems) { result ->
+            viewModel.importSignalItemsWithConflictResolution(
+                result.itemsToInsert,
+                result.itemsToUpdate
+            ) { importResult ->
                 coroutineScope.launch {
-                    result.onSuccess {
-                        dialogMessage = "Successfully imported ${selectedItems.size} signal items"
+                    importResult.onSuccess {
+                        val totalItems = result.itemsToInsert.size + result.itemsToUpdate.size
+                        dialogMessage = "Successfully imported $totalItems signal items"
                         showSuccessDialog = true
                     }.onFailure { error ->
                         dialogMessage = "Failed to import signal items: ${error.message}"
@@ -114,11 +118,11 @@ fun ExportImportScreen(
     }
     
     // Handle import selection result
-    LaunchedEffect(selectedImportItems) {
-        if (selectedImportItems.isNotEmpty()) {
+    LaunchedEffect(selectedImportResult) {
+        selectedImportResult?.let { result ->
             coroutineScope.launch {
-                handleImportWithSelection(selectedImportItems)
-                viewModel.clearSelectedImportItems()
+                handleImportWithSelection(result)
+                viewModel.clearSelectedImportResult()
             }
         }
     }
