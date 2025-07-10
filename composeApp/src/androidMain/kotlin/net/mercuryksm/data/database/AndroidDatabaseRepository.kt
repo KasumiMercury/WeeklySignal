@@ -8,12 +8,12 @@ class AndroidDatabaseRepository(private val context: Context) : DatabaseReposito
         getDatabaseBuilder(context).build()
     }
     
-    private val signalDao: SignalDao by lazy { database.signalDao() }
+    private val _signalDao: SignalDao by lazy { database.signalDao() }
     private val timeSlotDao: TimeSlotDao by lazy { database.timeSlotDao() }
     private val alarmStateDao: AlarmStateDao by lazy { database.alarmStateDao() }
     
     override suspend fun insertSignal(signalEntity: SignalEntity): Long {
-        return signalDao.insert(signalEntity)
+        return _signalDao.insert(signalEntity)
     }
     
     override suspend fun insertTimeSlot(timeSlotEntity: TimeSlotEntity): Long {
@@ -21,7 +21,7 @@ class AndroidDatabaseRepository(private val context: Context) : DatabaseReposito
     }
     
     override suspend fun updateSignal(signalEntity: SignalEntity) {
-        signalDao.update(signalEntity)
+        _signalDao.update(signalEntity)
     }
     
     override suspend fun updateTimeSlot(timeSlotEntity: TimeSlotEntity) {
@@ -29,7 +29,7 @@ class AndroidDatabaseRepository(private val context: Context) : DatabaseReposito
     }
     
     override suspend fun deleteSignal(signalId: String) {
-        signalDao.delete(signalId)
+        _signalDao.delete(signalId)
     }
     
     override suspend fun deleteTimeSlot(timeSlotId: String) {
@@ -41,11 +41,11 @@ class AndroidDatabaseRepository(private val context: Context) : DatabaseReposito
     }
     
     override suspend fun getSignalById(signalId: String): SignalEntity? {
-        return signalDao.getById(signalId)
+        return _signalDao.getById(signalId)
     }
     
     override suspend fun getAllSignals(): List<SignalEntity> {
-        return signalDao.getAll()
+        return _signalDao.getAll()
     }
     
     override suspend fun getTimeSlotsBySignalId(signalId: String): List<TimeSlotEntity> {
@@ -90,14 +90,17 @@ class AndroidDatabaseRepository(private val context: Context) : DatabaseReposito
     }
     
     override suspend fun <T> withTransaction(block: suspend () -> T): T {
-        // Room KMP 2.7.2 might not have withTransaction available
-        // Execute block directly with error propagation
-        // Note: This provides error handling but not true ACID transaction semantics
+        // Room KMP 2.7.2: Transaction support is implemented at DAO level using @Transaction
+        // This method is maintained for interface compatibility but not used in current implementation
+        // All database operations use @Transaction annotated DAO methods for true ACID semantics
         return try {
             block()
         } catch (e: Exception) {
-            // Re-throw exception to maintain error handling contract
             throw e
         }
+    }
+    
+    override fun getSignalDao(): SignalDao {
+        return _signalDao
     }
 }

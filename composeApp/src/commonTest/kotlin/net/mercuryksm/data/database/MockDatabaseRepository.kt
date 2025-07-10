@@ -90,7 +90,26 @@ class MockDatabaseRepository : DatabaseRepository {
     }
     
     override suspend fun <T> withTransaction(block: suspend () -> T): T {
-        // Mock implementation - just execute the block
+        // Mock implementation - simulates transaction by executing the block
+        // In a real test environment, this could track transaction calls
         return block()
+    }
+    
+    override fun getSignalDao(): SignalDao {
+        // Mock implementation - return a mock DAO
+        return object : SignalDao {
+            override suspend fun insert(signal: SignalEntity): Long = 1L
+            override suspend fun update(signal: SignalEntity) {}
+            override suspend fun delete(signalId: String) {}
+            override suspend fun getById(signalId: String): SignalEntity? = null
+            override suspend fun getAll(): List<SignalEntity> = emptyList()
+            override suspend fun insertSignalWithTimeSlots(signal: SignalEntity, timeSlots: List<TimeSlotEntity>) {}
+            override suspend fun updateSignalWithTimeSlots(signal: SignalEntity, timeSlots: List<TimeSlotEntity>) {}
+            override suspend fun deleteSignalWithTimeSlots(signalId: String) {}
+            override suspend fun insertMultipleSignalsWithTimeSlots(signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>) {}
+            override suspend fun updateMultipleSignalsWithTimeSlots(signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>) {}
+            override suspend fun insertTimeSlot(timeSlot: TimeSlotEntity): Long = 1L
+            override suspend fun deleteTimeSlotsBySignalId(signalId: String) {}
+        }
     }
 }

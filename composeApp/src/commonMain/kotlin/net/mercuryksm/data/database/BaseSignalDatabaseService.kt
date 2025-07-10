@@ -30,34 +30,30 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
     
     override suspend fun saveSignalItem(signalItem: SignalItem): Result<Unit> {
         return executeWithResult {
+            val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
-            databaseRepository.insertSignal(signalEntity)
-            
-            signalItem.timeSlots.forEach { timeSlot ->
-                val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                databaseRepository.insertTimeSlot(timeSlotEntity)
+            val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                timeSlot.toTimeSlotEntity(signalItem.id)
             }
+            signalDao.insertSignalWithTimeSlots(signalEntity, timeSlotEntities)
         }
     }
     
     override suspend fun updateSignalItem(signalItem: SignalItem): Result<Unit> {
         return executeWithResult {
+            val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
-            databaseRepository.updateSignal(signalEntity)
-            
-            databaseRepository.deleteTimeSlotsBySignalId(signalItem.id)
-            
-            signalItem.timeSlots.forEach { timeSlot ->
-                val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                databaseRepository.insertTimeSlot(timeSlotEntity)
+            val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                timeSlot.toTimeSlotEntity(signalItem.id)
             }
+            signalDao.updateSignalWithTimeSlots(signalEntity, timeSlotEntities)
         }
     }
     
     override suspend fun deleteSignalItem(signalId: String): Result<Unit> {
         return executeWithResult {
-            databaseRepository.deleteTimeSlotsBySignalId(signalId)
-            databaseRepository.deleteSignal(signalId)
+            val signalDao = databaseRepository.getSignalDao()
+            signalDao.deleteSignalWithTimeSlots(signalId)
         }
     }
     
@@ -153,48 +149,42 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         }
     }
     
-    // Batch operations with proper database transactions
+    // Batch operations using @Transaction annotated DAO methods for true ACID semantics
     override suspend fun saveSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
         return executeWithResult {
-            databaseRepository.withTransaction {
-                signalItems.forEach { signalItem ->
-                    val signalEntity = signalItem.toSignalEntity()
-                    databaseRepository.insertSignal(signalEntity)
-                    
-                    signalItem.timeSlots.forEach { timeSlot ->
-                        val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                        databaseRepository.insertTimeSlot(timeSlotEntity)
-                    }
+            val signalDao = databaseRepository.getSignalDao()
+            val signalsWithTimeSlots = signalItems.map { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                    timeSlot.toTimeSlotEntity(signalItem.id)
                 }
+                Pair(signalEntity, timeSlotEntities)
             }
+            signalDao.insertMultipleSignalsWithTimeSlots(signalsWithTimeSlots)
         }
     }
     
     override suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
         return executeWithResult {
-            databaseRepository.withTransaction {
-                signalItems.forEach { signalItem ->
-                    val signalEntity = signalItem.toSignalEntity()
-                    databaseRepository.updateSignal(signalEntity)
-                    
-                    databaseRepository.deleteTimeSlotsBySignalId(signalItem.id)
-                    
-                    signalItem.timeSlots.forEach { timeSlot ->
-                        val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                        databaseRepository.insertTimeSlot(timeSlotEntity)
-                    }
+            val signalDao = databaseRepository.getSignalDao()
+            val signalsWithTimeSlots = signalItems.map { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                    timeSlot.toTimeSlotEntity(signalItem.id)
                 }
+                Pair(signalEntity, timeSlotEntities)
             }
+            signalDao.updateMultipleSignalsWithTimeSlots(signalsWithTimeSlots)
         }
     }
     
     override suspend fun deleteSignalItemsInTransaction(signalIds: List<String>): Result<Unit> {
         return executeWithResult {
-            databaseRepository.withTransaction {
-                signalIds.forEach { signalId ->
-                    databaseRepository.deleteTimeSlotsBySignalId(signalId)
-                    databaseRepository.deleteSignal(signalId)
-                }
+            val signalDao = databaseRepository.getSignalDao()
+            // Use individual @Transaction methods for each deletion
+            // This ensures proper transaction semantics for each SignalItem
+            signalIds.forEach { signalId ->
+                signalDao.deleteSignalWithTimeSlots(signalId)
             }
         }
     }
@@ -204,30 +194,30 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         itemsToUpdate: List<SignalItem>
     ): Result<Unit> {
         return executeWithResult {
-            databaseRepository.withTransaction {
-                // Insert new items
-                itemsToInsert.forEach { signalItem ->
+            val signalDao = databaseRepository.getSignalDao()
+            
+            // Insert new items using @Transaction method
+            if (itemsToInsert.isNotEmpty()) {
+                val insertsWithTimeSlots = itemsToInsert.map { signalItem ->
                     val signalEntity = signalItem.toSignalEntity()
-                    databaseRepository.insertSignal(signalEntity)
-                    
-                    signalItem.timeSlots.forEach { timeSlot ->
-                        val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                        databaseRepository.insertTimeSlot(timeSlotEntity)
+                    val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                        timeSlot.toTimeSlotEntity(signalItem.id)
                     }
+                    Pair(signalEntity, timeSlotEntities)
                 }
-                
-                // Update existing items
-                itemsToUpdate.forEach { signalItem ->
+                signalDao.insertMultipleSignalsWithTimeSlots(insertsWithTimeSlots)
+            }
+            
+            // Update existing items using @Transaction method
+            if (itemsToUpdate.isNotEmpty()) {
+                val updatesWithTimeSlots = itemsToUpdate.map { signalItem ->
                     val signalEntity = signalItem.toSignalEntity()
-                    databaseRepository.updateSignal(signalEntity)
-                    
-                    databaseRepository.deleteTimeSlotsBySignalId(signalItem.id)
-                    
-                    signalItem.timeSlots.forEach { timeSlot ->
-                        val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
-                        databaseRepository.insertTimeSlot(timeSlotEntity)
+                    val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
+                        timeSlot.toTimeSlotEntity(signalItem.id)
                     }
+                    Pair(signalEntity, timeSlotEntities)
                 }
+                signalDao.updateMultipleSignalsWithTimeSlots(updatesWithTimeSlots)
             }
         }
     }

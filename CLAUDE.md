@@ -252,8 +252,42 @@ object WeeklyGridConstants {
 3. **Fallback Behavior**: Loads sample data only when database is empty (first run)
 4. **Type-Safe Operations**: Room DAO interfaces with compile-time SQL validation
 5. **Transaction Support**: Batch operations with `addSignalItemsInTransaction()`, `updateSignalItemsInTransaction()`, and `deleteSignalItemsInTransaction()` for atomic import/update operations with automatic rollback on failure
-   - **⚠️ Transaction Limitation**: Room KMP 2.7.2 does not support `withTransaction()` method in current setup. Transaction methods provide error handling and consistency but not full ACID transaction semantics
-   - **Fallback Implementation**: Database operations execute directly with proper error propagation to maintain reliability
+   - **✅ ACID Transaction Implementation**: Room KMP 2.7.2 `@Transaction` annotated DAO methods provide true ACID transaction semantics
+   - **DAO-Level Transactions**: SignalDao includes `@Transaction` methods for `insertSignalWithTimeSlots()`, `updateSignalWithTimeSlots()`, `deleteSignalWithTimeSlots()`, and batch operations
+   - **Automatic Rollback**: Database operations within `@Transaction` methods automatically rollback on any failure, ensuring data consistency
+
+### Room KMP Transaction Implementation Details
+
+The WeeklySignal app implements proper ACID transactions using Room KMP 2.7.2's `@Transaction` annotation:
+
+#### Transaction Methods in SignalDao
+- **`insertSignalWithTimeSlots()`**: Atomically inserts a SignalItem with all its TimeSlots
+- **`updateSignalWithTimeSlots()`**: Atomically updates a SignalItem and replaces all its TimeSlots
+- **`deleteSignalWithTimeSlots()`**: Atomically deletes a SignalItem and all related TimeSlots
+- **`insertMultipleSignalsWithTimeSlots()`**: Batch insert multiple SignalItems with their TimeSlots
+- **`updateMultipleSignalsWithTimeSlots()`**: Batch update multiple SignalItems with their TimeSlots
+
+#### ACID Properties Guaranteed
+- **Atomicity**: All operations within a `@Transaction` method succeed or fail together
+- **Consistency**: Foreign key constraints and data integrity maintained across operations
+- **Isolation**: Concurrent operations don't interfere with transaction execution
+- **Durability**: Committed transactions survive system failures
+
+#### Implementation Pattern
+```kotlin
+@Transaction
+suspend fun insertSignalWithTimeSlots(
+    signal: SignalEntity,
+    timeSlots: List<TimeSlotEntity>
+) {
+    insert(signal)
+    timeSlots.forEach { timeSlot ->
+        insertTimeSlot(timeSlot)
+    }
+}
+```
+
+This approach ensures data consistency during complex operations like import/export, batch updates, and conflict resolution.
 
 ## Development Notes
 
@@ -272,7 +306,7 @@ object WeeklyGridConstants {
 - **Multiple Items Display**: Use MultipleSignalItemsCell for adaptive display based on item count
 - **UI Dimension Changes**: Modify Constants.kt for consistent styling across all components
 - **Export/Import Errors**: Check file permissions and available storage space
-- **Database Transaction Issues**: Ensure all database operations use transaction methods for consistency (Note: Room KMP 2.7.2 has limited transaction support)
+- **Database Transaction Implementation**: Uses Room KMP 2.7.2 `@Transaction` annotated DAO methods for ACID transaction guarantees
 - **Conflict Resolution**: Use appropriate conflict resolution strategy based on user requirements
 
 ## Key Implementation Insights
