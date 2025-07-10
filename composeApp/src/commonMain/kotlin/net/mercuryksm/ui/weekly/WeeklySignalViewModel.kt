@@ -10,25 +10,26 @@ import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.ExportSelectionState
 import net.mercuryksm.data.ImportConflictResolutionResult
 import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.ui.coordination.ImportExportCoordinator
+import net.mercuryksm.ui.coordination.AlarmCoordinator
 
 class WeeklySignalViewModel(
     private val signalRepository: SignalRepository,
-    private val alarmManager: SignalAlarmManager? = null
+    alarmManager: SignalAlarmManager? = null
 ) : ViewModel() {
 
     private val _signalItems = MutableStateFlow<List<SignalItem>>(emptyList())
     val signalItems: StateFlow<List<SignalItem>> = _signalItems.asStateFlow()
     val isLoading: StateFlow<Boolean> = signalRepository.isLoading
     
-    // Export/Import selection state
-    private val _exportSelectionState = MutableStateFlow<ExportSelectionState?>(null)
-    val exportSelectionState: StateFlow<ExportSelectionState?> = _exportSelectionState.asStateFlow()
+    // Coordinators for specialized responsibilities
+    private val importExportCoordinator = ImportExportCoordinator()
+    private val alarmCoordinator = AlarmCoordinator(alarmManager, viewModelScope)
     
-    private val _importedItems = MutableStateFlow<List<SignalItem>>(emptyList())
-    val importedItems: StateFlow<List<SignalItem>> = _importedItems.asStateFlow()
-    
-    private val _selectedImportResult = MutableStateFlow<ImportConflictResolutionResult?>(null)
-    val selectedImportResult: StateFlow<ImportConflictResolutionResult?> = _selectedImportResult.asStateFlow()
+    // Expose coordinator state
+    val exportSelectionState: StateFlow<ExportSelectionState?> = importExportCoordinator.exportSelectionState
+    val importedItems: StateFlow<List<SignalItem>> = importExportCoordinator.importedItems
+    val selectedImportResult: StateFlow<ImportConflictResolutionResult?> = importExportCoordinator.selectedImportResult
 
     init {
         // Observe repository changes and update StateFlow
@@ -44,7 +45,7 @@ class WeeklySignalViewModel(
             val result = signalRepository.addSignalItem(signalItem)
             result.onSuccess {
                 // Schedule alarms for the new SignalItem
-                scheduleSignalItemAlarms(signalItem)
+                alarmCoordinator.scheduleSignalItemAlarms(signalItem)
             }
             onResult(result)
         }
@@ -57,9 +58,9 @@ class WeeklySignalViewModel(
             result.onSuccess {
                 // Update alarms for the modified SignalItem
                 if (oldSignalItem != null) {
-                    updateSignalItemAlarms(oldSignalItem, signalItem)
+                    alarmCoordinator.updateSignalItemAlarms(oldSignalItem, signalItem)
                 } else {
-                    scheduleSignalItemAlarms(signalItem)
+                    alarmCoordinator.scheduleSignalItemAlarms(signalItem)
                 }
             }
             onResult(result)
@@ -71,7 +72,7 @@ class WeeklySignalViewModel(
             val result = signalRepository.removeSignalItem(signalItem)
             result.onSuccess {
                 // Cancel alarms for the removed SignalItem
-                cancelSignalItemAlarms(signalItem)
+                alarmCoordinator.cancelSignalItemAlarms(signalItem)
             }
             onResult(result)
         }
@@ -101,88 +102,40 @@ class WeeklySignalViewModel(
             val result = signalRepository.clearAllSignalItems()
             result.onSuccess {
                 // Cancel all alarms
-                signalItems.value.forEach { signalItem ->
-                    cancelSignalItemAlarms(signalItem)
-                }
+                alarmCoordinator.cancelSignalItemsAlarms(signalItems.value)
             }
             onResult(result)
         }
     }
     
-    // Alarm management methods
-    
-    private fun scheduleSignalItemAlarms(signalItem: SignalItem) {
-        viewModelScope.launch {
-            alarmManager?.let { manager ->
-                try {
-                    manager.scheduleSignalItemAlarms(signalItem)
-                } catch (e: Exception) {
-                    // Log alarm scheduling error but don't fail the overall operation
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-    
-    private fun cancelSignalItemAlarms(signalItem: SignalItem) {
-        viewModelScope.launch {
-            alarmManager?.let { manager ->
-                try {
-                    manager.cancelSignalItemAlarms(signalItem)
-                } catch (e: Exception) {
-                    // Log alarm cancellation error but don't fail the overall operation
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-    
-    private fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem) {
-        viewModelScope.launch {
-            alarmManager?.let { manager ->
-                try {
-                    manager.updateSignalItemAlarms(oldSignalItem, newSignalItem)
-                } catch (e: Exception) {
-                    // Log alarm update error but don't fail the overall operation
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-    
+    // Alarm management methods - delegate to AlarmCoordinator
     suspend fun isSignalItemAlarmsEnabled(signalItemId: String): Boolean {
-        return alarmManager?.let { manager ->
-            try {
-                manager.isSignalItemAlarmsEnabled(signalItemId)
-            } catch (e: Exception) {
-                false
-            }
-        } ?: false
+        return alarmCoordinator.isSignalItemAlarmsEnabled(signalItemId)
     }
     
-    // Export/Import selection state management
+    // Export/Import selection state management - delegate to ImportExportCoordinator
     fun setExportSelectionState(state: ExportSelectionState) {
-        _exportSelectionState.value = state
+        importExportCoordinator.setExportSelectionState(state)
     }
     
     fun clearExportSelectionState() {
-        _exportSelectionState.value = null
+        importExportCoordinator.clearExportSelectionState()
     }
     
     fun setImportedItems(items: List<SignalItem>) {
-        _importedItems.value = items
+        importExportCoordinator.setImportedItems(items)
     }
     
     fun clearImportedItems() {
-        _importedItems.value = emptyList()
+        importExportCoordinator.clearImportedItems()
     }
     
     fun setSelectedImportResult(result: ImportConflictResolutionResult) {
-        _selectedImportResult.value = result
+        importExportCoordinator.setSelectedImportResult(result)
     }
     
     fun clearSelectedImportResult() {
-        _selectedImportResult.value = null
+        importExportCoordinator.clearSelectedImportResult()
     }
     
     // Improved import methods with transaction support and conflict resolution
@@ -195,9 +148,7 @@ class WeeklySignalViewModel(
             val result = signalRepository.importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)
             result.onSuccess {
                 // Schedule alarms for all imported SignalItems
-                (itemsToInsert + itemsToUpdate).forEach { signalItem ->
-                    scheduleSignalItemAlarms(signalItem)
-                }
+                alarmCoordinator.scheduleSignalItemsAlarms(itemsToInsert + itemsToUpdate)
             }
             onResult(result)
         }
@@ -214,9 +165,9 @@ class WeeklySignalViewModel(
                 signalItems.forEach { signalItem ->
                     val oldSignalItem = getSignalItemById(signalItem.id)
                     if (oldSignalItem != null) {
-                        updateSignalItemAlarms(oldSignalItem, signalItem)
+                        alarmCoordinator.updateSignalItemAlarms(oldSignalItem, signalItem)
                     } else {
-                        scheduleSignalItemAlarms(signalItem)
+                        alarmCoordinator.scheduleSignalItemAlarms(signalItem)
                     }
                 }
             }

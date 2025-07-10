@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.*
+import net.mercuryksm.ui.usecase.ImportSelectionUseCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,16 +25,15 @@ fun ImportSelectionScreen(
     var selectionState by remember { mutableStateOf(ExportSelectionState()) }
     var showConflictDialog by remember { mutableStateOf(false) }
     
+    val importSelectionUseCase = remember { ImportSelectionUseCase() }
+    
     // Initialize selection state for imported items
     LaunchedEffect(importedItems) {
-        selectionState = SelectionStateManager.createInitialState(importedItems)
-        // Initially select all imported items
-        selectionState = SelectionStateManager.selectAll(selectionState, true)
+        selectionState = importSelectionUseCase.createInitialSelectionState(importedItems)
     }
     
-    val conflictResolver = remember { ImportConflictResolver() }
     val conflicts = remember(existingItems, importedItems) {
-        conflictResolver.findConflicts(existingItems, importedItems)
+        importSelectionUseCase.findConflicts(existingItems, importedItems)
     }
     
     Scaffold(
@@ -103,10 +103,7 @@ fun ImportSelectionScreen(
                                 showConflictDialog = true
                             } else {
                                 // No conflicts, all selected items are new items to insert
-                                val result = ImportConflictResolutionResult(
-                                    itemsToInsert = selectionState.selectedSignalItemsWithTimeSlots,
-                                    itemsToUpdate = emptyList()
-                                )
+                                val result = importSelectionUseCase.handleNoConflictImport(selectionState)
                                 onImportSelected(result)
                             }
                         },
@@ -240,7 +237,7 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val result = conflictResolver.resolveConflicts(
+                                val result = importSelectionUseCase.handleConflictResolution(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.REPLACE_EXISTING
@@ -255,7 +252,7 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val result = conflictResolver.resolveConflicts(
+                                val result = importSelectionUseCase.handleConflictResolution(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.KEEP_EXISTING
@@ -274,7 +271,7 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val result = conflictResolver.resolveConflicts(
+                                val result = importSelectionUseCase.handleConflictResolution(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.MERGE_TIME_SLOTS

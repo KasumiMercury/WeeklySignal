@@ -22,4 +22,7 @@ interface DatabaseRepository {
     suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String)
     suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean)
     suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long)
+    
+    // Transaction support
+    suspend fun <T> withTransaction(block: suspend () -> T): T
 }

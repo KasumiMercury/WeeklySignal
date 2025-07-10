@@ -55,4 +55,42 @@ class MockDatabaseRepository : DatabaseRepository {
         signals.clear()
         timeSlots.clear()
     }
+    
+    // Alarm state management methods - minimal implementation for testing
+    override suspend fun insertOrUpdateAlarmState(alarmState: AlarmStateEntity) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun getAlarmStateByTimeSlotId(timeSlotId: String): AlarmStateEntity? {
+        return null
+    }
+    
+    override suspend fun getAlarmStatesBySignalItemId(signalItemId: String): List<AlarmStateEntity> {
+        return emptyList()
+    }
+    
+    override suspend fun getAllScheduledAlarmStates(): List<AlarmStateEntity> {
+        return emptyList()
+    }
+    
+    override suspend fun deleteAlarmState(timeSlotId: String) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun deleteAlarmStatesBySignalItemId(signalItemId: String) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun updateAlarmScheduledStatus(timeSlotId: String, isScheduled: Boolean) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long) {
+        // Mock implementation - do nothing
+    }
+    
+    override suspend fun <T> withTransaction(block: suspend () -> T): T {
+        // Mock implementation - just execute the block
+        return block()
+    }
 }

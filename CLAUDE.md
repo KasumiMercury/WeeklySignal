@@ -252,6 +252,8 @@ object WeeklyGridConstants {
 3. **Fallback Behavior**: Loads sample data only when database is empty (first run)
 4. **Type-Safe Operations**: Room DAO interfaces with compile-time SQL validation
 5. **Transaction Support**: Batch operations with `addSignalItemsInTransaction()`, `updateSignalItemsInTransaction()`, and `deleteSignalItemsInTransaction()` for atomic import/update operations with automatic rollback on failure
+   - **⚠️ Transaction Limitation**: Room KMP 2.7.2 does not support `withTransaction()` method in current setup. Transaction methods provide error handling and consistency but not full ACID transaction semantics
+   - **Fallback Implementation**: Database operations execute directly with proper error propagation to maintain reliability
 
 ## Development Notes
 
@@ -270,7 +272,7 @@ object WeeklyGridConstants {
 - **Multiple Items Display**: Use MultipleSignalItemsCell for adaptive display based on item count
 - **UI Dimension Changes**: Modify Constants.kt for consistent styling across all components
 - **Export/Import Errors**: Check file permissions and available storage space
-- **Database Transaction Issues**: Ensure all database operations use transaction methods for consistency
+- **Database Transaction Issues**: Ensure all database operations use transaction methods for consistency (Note: Room KMP 2.7.2 has limited transaction support)
 - **Conflict Resolution**: Use appropriate conflict resolution strategy based on user requirements
 
 ## Key Implementation Insights

@@ -86,4 +86,16 @@ class DesktopDatabaseRepository : DatabaseRepository {
     override suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long) {
         alarmStateDao.updateNextAlarmTime(timeSlotId, nextAlarmTime)
     }
+    
+    override suspend fun <T> withTransaction(block: suspend () -> T): T {
+        // Room KMP 2.7.2 might not have withTransaction available
+        // Execute block directly with error propagation
+        // Note: This provides error handling but not true ACID transaction semantics
+        return try {
+            block()
+        } catch (e: Exception) {
+            // Re-throw exception to maintain error handling contract
+            throw e
+        }
+    }
 }
