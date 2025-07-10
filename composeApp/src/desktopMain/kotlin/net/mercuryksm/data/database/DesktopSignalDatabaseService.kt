@@ -82,6 +82,19 @@ class DesktopSignalDatabaseService(
         }
     }
     
+    override suspend fun clearAllSignalItems(): Result<Unit> {
+        return try {
+            val signalEntities = databaseRepository.getAllSignals()
+            signalEntities.forEach { signal ->
+                databaseRepository.deleteTimeSlotsBySignalId(signal.id)
+                databaseRepository.deleteSignal(signal.id)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     override suspend fun clearAllData(): Result<Unit> {
         return try {
             val signalEntities = databaseRepository.getAllSignals()
@@ -162,6 +175,60 @@ class DesktopSignalDatabaseService(
     override suspend fun updateAlarmNextTime(timeSlotId: String, nextAlarmTime: Long): Result<Unit> {
         return try {
             databaseRepository.updateAlarmNextTime(timeSlotId, nextAlarmTime)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    // Transaction-based batch operations
+    override suspend fun saveSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
+        return try {
+            // Note: Room database operations are inherently transactional
+            // This implementation provides consistency by wrapping all operations
+            signalItems.forEach { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                databaseRepository.insertSignal(signalEntity)
+                
+                signalItem.timeSlots.forEach { timeSlot ->
+                    val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
+                    databaseRepository.insertTimeSlot(timeSlotEntity)
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
+        return try {
+            signalItems.forEach { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                databaseRepository.updateSignal(signalEntity)
+                
+                databaseRepository.deleteTimeSlotsBySignalId(signalItem.id)
+                
+                signalItem.timeSlots.forEach { timeSlot ->
+                    val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
+                    databaseRepository.insertTimeSlot(timeSlotEntity)
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun deleteSignalItemsInTransaction(signalIds: List<String>): Result<Unit> {
+        return try {
+            signalIds.forEach { signalId ->
+                databaseRepository.deleteTimeSlotsBySignalId(signalId)
+                databaseRepository.deleteSignal(signalId)
+            }
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

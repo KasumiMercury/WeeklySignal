@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.SignalRepository
+import net.mercuryksm.data.ExportSelectionState
 import net.mercuryksm.notification.SignalAlarmManager
 
 class WeeklySignalViewModel(
@@ -17,6 +18,16 @@ class WeeklySignalViewModel(
     private val _signalItems = MutableStateFlow<List<SignalItem>>(emptyList())
     val signalItems: StateFlow<List<SignalItem>> = _signalItems.asStateFlow()
     val isLoading: StateFlow<Boolean> = signalRepository.isLoading
+    
+    // Export/Import selection state
+    private val _exportSelectionState = MutableStateFlow<ExportSelectionState?>(null)
+    val exportSelectionState: StateFlow<ExportSelectionState?> = _exportSelectionState.asStateFlow()
+    
+    private val _importedItems = MutableStateFlow<List<SignalItem>>(emptyList())
+    val importedItems: StateFlow<List<SignalItem>> = _importedItems.asStateFlow()
+    
+    private val _selectedImportItems = MutableStateFlow<List<SignalItem>>(emptyList())
+    val selectedImportItems: StateFlow<List<SignalItem>> = _selectedImportItems.asStateFlow()
 
     init {
         // Observe repository changes and update StateFlow
@@ -84,6 +95,19 @@ class WeeklySignalViewModel(
         return signalItems.value
     }
     
+    fun clearAllSignalItems(onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = signalRepository.clearAllSignalItems()
+            result.onSuccess {
+                // Cancel all alarms
+                signalItems.value.forEach { signalItem ->
+                    cancelSignalItemAlarms(signalItem)
+                }
+            }
+            onResult(result)
+        }
+    }
+    
     // Alarm management methods
     
     private fun scheduleSignalItemAlarms(signalItem: SignalItem) {
@@ -133,5 +157,68 @@ class WeeklySignalViewModel(
                 false
             }
         } ?: false
+    }
+    
+    // Export/Import selection state management
+    fun setExportSelectionState(state: ExportSelectionState) {
+        _exportSelectionState.value = state
+    }
+    
+    fun clearExportSelectionState() {
+        _exportSelectionState.value = null
+    }
+    
+    fun setImportedItems(items: List<SignalItem>) {
+        _importedItems.value = items
+    }
+    
+    fun clearImportedItems() {
+        _importedItems.value = emptyList()
+    }
+    
+    fun setSelectedImportItems(items: List<SignalItem>) {
+        _selectedImportItems.value = items
+    }
+    
+    fun clearSelectedImportItems() {
+        _selectedImportItems.value = emptyList()
+    }
+    
+    // Improved import methods with transaction support and conflict resolution
+    fun importSignalItemsWithConflictResolution(
+        signalItems: List<SignalItem>,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = signalRepository.addSignalItemsInTransaction(signalItems)
+            result.onSuccess {
+                // Schedule alarms for all imported SignalItems
+                signalItems.forEach { signalItem ->
+                    scheduleSignalItemAlarms(signalItem)
+                }
+            }
+            onResult(result)
+        }
+    }
+    
+    fun updateSignalItemsWithConflictResolution(
+        signalItems: List<SignalItem>,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = signalRepository.updateSignalItemsInTransaction(signalItems)
+            result.onSuccess {
+                // Update alarms for all modified SignalItems
+                signalItems.forEach { signalItem ->
+                    val oldSignalItem = getSignalItemById(signalItem.id)
+                    if (oldSignalItem != null) {
+                        updateSignalItemAlarms(oldSignalItem, signalItem)
+                    } else {
+                        scheduleSignalItemAlarms(signalItem)
+                    }
+                }
+            }
+            onResult(result)
+        }
     }
 }

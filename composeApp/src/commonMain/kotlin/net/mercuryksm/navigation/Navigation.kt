@@ -6,4 +6,7 @@ sealed class Screen(val route: String) {
     data object SignalEdit : Screen("signal_edit/{signalId}") {
         fun createRoute(signalId: String) = "signal_edit/$signalId"
     }
+    data object ExportImport : Screen("export_import")
+    data object ExportSelection : Screen("export_selection")
+    data object ImportSelection : Screen("import_selection")
 }
