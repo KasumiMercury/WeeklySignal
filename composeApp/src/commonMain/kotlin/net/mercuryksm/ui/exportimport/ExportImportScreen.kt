@@ -82,11 +82,18 @@ fun ExportImportScreen(
         isImporting = true
         
         try {
-            selectedItems.forEach { signalItem ->
-                viewModel.addSignalItem(signalItem)
+            // Use transaction-based import method for better reliability
+            viewModel.importSignalItemsWithConflictResolution(selectedItems) { result ->
+                coroutineScope.launch {
+                    result.onSuccess {
+                        dialogMessage = "Successfully imported ${selectedItems.size} signal items"
+                        showSuccessDialog = true
+                    }.onFailure { error ->
+                        dialogMessage = "Failed to import signal items: ${error.message}"
+                        showErrorDialog = true
+                    }
+                }
             }
-            dialogMessage = "Successfully imported ${selectedItems.size} signal items"
-            showSuccessDialog = true
         } catch (e: Exception) {
             dialogMessage = "Failed to import signal items: ${e.message}"
             showErrorDialog = true
@@ -124,16 +131,20 @@ fun ExportImportScreen(
             
             when (fileResult) {
                 is FileReadResult.Success -> {
-                    val importResult = exportImportService.importSignalItems(fileResult.content)
+                    // Use the new conflict check method to provide better user experience
+                    val conflictCheckResult = exportImportService.checkForConflicts(
+                        fileResult.content,
+                        signalItems
+                    )
                     
-                    when (importResult) {
-                        is ImportResult.Success -> {
+                    when (conflictCheckResult) {
+                        is ConflictCheckResult.Success -> {
                             // Store imported items in ViewModel and navigate to selection screen
-                            viewModel.setImportedItems(importResult.signalItems)
+                            viewModel.setImportedItems(conflictCheckResult.importedItems)
                             onNavigateToImportSelection()
                         }
-                        is ImportResult.Error -> {
-                            dialogMessage = importResult.message
+                        is ConflictCheckResult.Error -> {
+                            dialogMessage = conflictCheckResult.message
                             showErrorDialog = true
                         }
                     }

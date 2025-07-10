@@ -183,4 +183,42 @@ class WeeklySignalViewModel(
     fun clearSelectedImportItems() {
         _selectedImportItems.value = emptyList()
     }
+    
+    // Improved import methods with transaction support and conflict resolution
+    fun importSignalItemsWithConflictResolution(
+        signalItems: List<SignalItem>,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = signalRepository.addSignalItemsInTransaction(signalItems)
+            result.onSuccess {
+                // Schedule alarms for all imported SignalItems
+                signalItems.forEach { signalItem ->
+                    scheduleSignalItemAlarms(signalItem)
+                }
+            }
+            onResult(result)
+        }
+    }
+    
+    fun updateSignalItemsWithConflictResolution(
+        signalItems: List<SignalItem>,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = signalRepository.updateSignalItemsInTransaction(signalItems)
+            result.onSuccess {
+                // Update alarms for all modified SignalItems
+                signalItems.forEach { signalItem ->
+                    val oldSignalItem = getSignalItemById(signalItem.id)
+                    if (oldSignalItem != null) {
+                        updateSignalItemAlarms(oldSignalItem, signalItem)
+                    } else {
+                        scheduleSignalItemAlarms(signalItem)
+                    }
+                }
+            }
+            onResult(result)
+        }
+    }
 }
