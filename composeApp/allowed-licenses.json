@@ -1,0 +1,69 @@
+{
+  "allowedLicenses": [
+    {
+      "moduleName": "MIT License",
+      "moduleVersion": "",
+      "moduleLicense": "MIT"
+    },
+    {
+      "moduleName": "Apache License 2.0",
+      "moduleVersion": "",
+      "moduleLicense": "Apache-2.0"
+    },
+    {
+      "moduleName": "Apache Software License",
+      "moduleVersion": "",
+      "moduleLicense": "Apache-2.0"
+    },
+    {
+      "moduleName": "The Apache Software License, Version 2.0",
+      "moduleVersion": "",
+      "moduleLicense": "Apache-2.0"
+    },
+    {
+      "moduleName": "BSD 2-Clause License",
+      "moduleVersion": "",
+      "moduleLicense": "BSD-2-Clause"
+    },
+    {
+      "moduleName": "BSD 3-Clause License",
+      "moduleVersion": "",
+      "moduleLicense": "BSD-3-Clause"
+    },
+    {
+      "moduleName": "Eclipse Public License 1.0",
+      "moduleVersion": "",
+      "moduleLicense": "EPL-1.0"
+    },
+    {
+      "moduleName": "Eclipse Public License 2.0",
+      "moduleVersion": "",
+      "moduleLicense": "EPL-2.0"
+    },
+    {
+      "moduleName": "CDDL + GPLv2 with classpath exception",
+      "moduleVersion": "",
+      "moduleLicense": "CDDL-1.1"
+    },
+    {
+      "moduleName": "Common Development and Distribution License 1.0",
+      "moduleVersion": "",
+      "moduleLicense": "CDDL-1.0"
+    },
+    {
+      "moduleName": "Mozilla Public License 2.0",
+      "moduleVersion": "",
+      "moduleLicense": "MPL-2.0"
+    },
+    {
+      "moduleName": "Public Domain",
+      "moduleVersion": "",
+      "moduleLicense": "Public Domain"
+    },
+    {
+      "moduleName": "The Unlicense",
+      "moduleVersion": "",
+      "moduleLicense": "Unlicense"
+    }
+  ]
+}

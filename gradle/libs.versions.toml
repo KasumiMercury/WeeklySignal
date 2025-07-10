@@ -20,6 +20,7 @@ kotlin = "2.2.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serializationJson = "1.9.0"
 ksp = "2.2.0-2.0.2"
+jkl-licenseReport = "2.9"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -49,3 +50,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "androidx-room" }
+jk1-licenseReport = { id = "com.github.jk1.dependency-license-report", version.ref = "jkl-licenseReport" }
