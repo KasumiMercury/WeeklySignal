@@ -54,9 +54,21 @@ WeeklySignal is a Kotlin Multiplatform project using Compose Multiplatform, targ
 - **TimeSlotEditor.kt**: Component for managing multiple time slots in a list format
 - **TimeSlotDialog.kt**: Dialog for selecting individual day/time combinations
 
+#### Export/Import Flow (`ui/exportimport/`)
+- **ExportImportScreen.kt**: Main hub for export/import operations with file selection and status dialogs
+- **ExportSelectionScreen.kt**: Screen for selecting specific SignalItems and TimeSlots to export
+- **ImportSelectionScreen.kt**: Screen for reviewing imported items with conflict resolution
+- **SelectableSignalItemList.kt**: Reusable component for item/TimeSlot selection with expandable cards
+
+### Export/Import System (`data/`)
+- **ExportImportService.kt**: Core service managing serialization, validation, and conflict resolution
+- **SignalItemExportFormat.kt**: JSON serialization format with metadata and version control
+- **SelectionState.kt**: State management for selective export/import operations
+- **FileOperationsService.kt**: Platform-specific file operations with `.weeklysignal` extension support
+
 ### Navigation (`navigation/`)
-- **Navigation.kt**: Screen route definitions including SignalEdit route with parameters
-- **NavGraph.kt**: Navigation graph with routes for main view, registration, and editing
+- **Navigation.kt**: Screen route definitions including SignalEdit and ExportImport routes
+- **NavGraph.kt**: Navigation graph with routes for main view, registration, editing, and export/import
 
 ## Development Commands
 
@@ -227,6 +239,7 @@ object WeeklyGridConstants {
 2. **Platform-Specific Services**: DatabaseServiceFactory creates appropriate database service per platform
 3. **Fallback Behavior**: Loads sample data only when database is empty (first run)
 4. **Type-Safe Operations**: Room DAO interfaces with compile-time SQL validation
+5. **Transaction Support**: Batch operations with `saveSignalItemsInTransaction()`, `updateSignalItemsInTransaction()`, and `deleteSignalItemsInTransaction()` for atomic import/update operations
 
 ## Development Notes
 
@@ -268,7 +281,99 @@ object WeeklyGridConstants {
 - **Main View**: WeeklySignalView displays all SignalItems in weekly grid
 - **Add Flow**: FloatingActionButton → SignalRegistrationScreen → back to main view
 - **Edit Flow**: Click SignalItem → SignalEditScreen → back to main view
+- **Export/Import Flow**: Menu → ExportImportScreen → ExportSelectionScreen/ImportSelectionScreen → back to main view
 - **Alarm Management**: Automatic alarm scheduling/cancellation on SignalItem CRUD operations
+
+## Export/Import System
+
+### Current Status: ✅ FULLY IMPLEMENTED
+- **Complete Import/Export Infrastructure**: Full-featured system with selective operations and conflict resolution
+- **File Format**: JSON-based `.weeklysignal` files with metadata and versioning
+- **Conflict Resolution**: Three strategies for handling duplicate SignalItems during import
+- **Transaction Safety**: Atomic operations prevent database inconsistency during batch imports
+- **Cross-Platform Support**: Platform-specific file operations for Android and Desktop
+
+### Export Features
+- **Selective Export**: Choose specific SignalItems and individual TimeSlots
+- **Export Preview**: Summary showing selected items and time slots before export
+- **Metadata Tracking**: Export includes version, timestamp, and app version information
+- **File Naming**: Automatic timestamp-based naming with selection context
+
+### Import Features
+- **Conflict Detection**: Automatically identifies SignalItems with matching IDs
+- **Conflict Resolution Strategies**:
+  - **Replace Existing**: Overwrites existing items with imported versions
+  - **Keep Existing**: Preserves current items, skips conflicting imports
+  - **Merge Time Slots**: Adds new TimeSlots to existing items without duplicates
+- **Import Preview**: Review all imported items before confirmation
+- **Selective Import**: Choose which items to import from the file
+
+### File Format Specification
+```json
+{
+  "version": "1.0",
+  "exportedAt": "2024-01-15T10:30:00Z",
+  "appVersion": "1.0.0",
+  "signalItems": [
+    {
+      "id": "uuid-string",
+      "name": "Signal Name",
+      "description": "Description",
+      "sound": true,
+      "vibration": false,
+      "color": 4278190335,
+      "timeSlots": [
+        {
+          "id": "uuid-string",
+          "hour": 9,
+          "minute": 0,
+          "dayOfWeek": 1
+        }
+      ]
+    }
+  ]
+}
+```
+
+### UI Components
+- **ExportImportScreen**: Main hub with export/import buttons and operation status
+- **ExportSelectionScreen**: Selective export with expandable SignalItem cards
+- **ImportSelectionScreen**: Import preview with conflict warnings and resolution dialog
+- **SelectableSignalItemList**: Reusable component for item selection with:
+  - Individual SignalItem and TimeSlot selection
+  - Expandable cards with animated transitions
+  - "Select All" functionality
+  - Visual conflict indicators
+
+### Technical Implementation
+- **Service Layer**: `ExportImportService` handles serialization, validation, and conflict logic
+- **Repository Integration**: Transaction-based batch operations for data consistency
+- **State Management**: Reactive StateFlow for export/import selections
+- **Platform Services**: `FileOperationsService` with Android Storage Access Framework and Desktop FileDialog
+- **Validation**: Comprehensive data validation including ID uniqueness and time range checks
+
+### Import Process Flow
+1. **File Selection**: Platform-specific file picker for `.weeklysignal` files
+2. **Conflict Detection**: `checkForConflicts()` identifies items with matching IDs
+3. **Import Preview**: User reviews items and sees conflict warnings
+4. **Selection**: User chooses which items to import (selective import)
+5. **Conflict Resolution**: If conflicts exist, user chooses resolution strategy
+6. **Transaction Execution**: `importSignalItemsWithConflictResolution()` performs atomic import
+7. **Alarm Integration**: Automatic alarm scheduling for imported items
+
+### Key Classes and Methods
+- **ExportImportService**:
+  - `exportSelectedSignalItems()` - Selective export with metadata
+  - `checkForConflicts()` - Conflict detection before import
+  - `importSignalItemsWithConflictResolution()` - Conflict-aware import
+- **ImportConflictResolver**:
+  - `findConflicts()` - Identify conflicting items
+  - `resolveConflicts()` - Apply resolution strategy
+- **SignalRepository**:
+  - `addSignalItemsInTransaction()` - Atomic batch insert
+  - `updateSignalItemsInTransaction()` - Atomic batch update
+- **WeeklySignalViewModel**:
+  - `importSignalItemsWithConflictResolution()` - Import with alarm management
 
 ## Testing Architecture
 - **Unit Tests**: EntityMappers, data model validation
