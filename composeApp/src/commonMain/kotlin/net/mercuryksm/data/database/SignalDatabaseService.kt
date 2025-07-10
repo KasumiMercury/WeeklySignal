@@ -11,6 +11,11 @@ interface SignalDatabaseService {
     suspend fun clearAllSignalItems(): Result<Unit>
     suspend fun clearAllData(): Result<Unit>
     
+    // Batch operations with transaction support
+    suspend fun saveSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
+    suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
+    suspend fun deleteSignalItemsInTransaction(signalIds: List<String>): Result<Unit>
+    
     // Alarm state management methods
     suspend fun saveAlarmState(alarmState: AlarmStateEntity): Result<Unit>
     suspend fun getAlarmStateByTimeSlotId(timeSlotId: String): Result<AlarmStateEntity?>

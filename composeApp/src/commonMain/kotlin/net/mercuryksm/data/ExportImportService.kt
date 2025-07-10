@@ -15,6 +15,15 @@ sealed class ImportResult {
     data class Error(val message: String) : ImportResult()
 }
 
+sealed class ConflictCheckResult {
+    data class Success(
+        val importedItems: List<SignalItem>,
+        val conflictingItems: List<SignalItem>,
+        val hasConflicts: Boolean
+    ) : ConflictCheckResult()
+    data class Error(val message: String) : ConflictCheckResult()
+}
+
 class ExportImportService {
     
     private val json = Json {
@@ -108,6 +117,71 @@ class ExportImportService {
             ImportResult.Success(signalItems)
         } catch (e: Exception) {
             ImportResult.Error("Failed to import signal items: ${e.message}")
+        }
+    }
+    
+    /**
+     * Import SignalItems with conflict resolution
+     */
+    fun importSignalItemsWithConflictResolution(
+        jsonString: String,
+        existingSignalItems: List<SignalItem>,
+        conflictResolution: ConflictResolution
+    ): ImportResult {
+        return try {
+            val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
+            
+            // Validate the imported data
+            val validationResult = validateImportData(exportData)
+            if (validationResult != null) {
+                return ImportResult.Error(validationResult)
+            }
+            
+            val importedSignalItems = exportData.toSignalItems()
+            val conflictResolver = ImportConflictResolver()
+            
+            // Resolve conflicts
+            val resolvedSignalItems = conflictResolver.resolveConflicts(
+                existingSignalItems,
+                importedSignalItems,
+                conflictResolution
+            )
+            
+            ImportResult.Success(resolvedSignalItems)
+        } catch (e: Exception) {
+            ImportResult.Error("Failed to import signal items with conflict resolution: ${e.message}")
+        }
+    }
+    
+    /**
+     * Check for conflicts between existing and imported SignalItems
+     */
+    fun checkForConflicts(
+        jsonString: String,
+        existingSignalItems: List<SignalItem>
+    ): ConflictCheckResult {
+        return try {
+            val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
+            
+            // Validate the imported data
+            val validationResult = validateImportData(exportData)
+            if (validationResult != null) {
+                return ConflictCheckResult.Error(validationResult)
+            }
+            
+            val importedSignalItems = exportData.toSignalItems()
+            val conflictResolver = ImportConflictResolver()
+            
+            // Find conflicts
+            val conflictingItems = conflictResolver.findConflicts(existingSignalItems, importedSignalItems)
+            
+            ConflictCheckResult.Success(
+                importedItems = importedSignalItems,
+                conflictingItems = conflictingItems,
+                hasConflicts = conflictingItems.isNotEmpty()
+            )
+        } catch (e: Exception) {
+            ConflictCheckResult.Error("Failed to check for conflicts: ${e.message}")
         }
     }
     
