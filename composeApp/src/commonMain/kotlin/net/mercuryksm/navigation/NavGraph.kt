@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import net.mercuryksm.data.*
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.ui.weekly.WeeklySignalView
 import net.mercuryksm.ui.edit.SignalEditScreen
@@ -103,9 +104,9 @@ fun NavGraph(
                 onBackPressed = {
                     navController.popBackStack()
                 },
-                onImportSelected = { selectedItems ->
-                    // Pass the selected items back to the ExportImportScreen
-                    viewModel.setSelectedImportItems(selectedItems)
+                onImportSelected = { result ->
+                    // Pass the import result back to the ExportImportScreen
+                    viewModel.setSelectedImportResult(result)
                     navController.popBackStack()
                 }
             )

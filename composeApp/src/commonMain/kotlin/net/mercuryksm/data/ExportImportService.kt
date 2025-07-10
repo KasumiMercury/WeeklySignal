@@ -127,29 +127,27 @@ class ExportImportService {
         jsonString: String,
         existingSignalItems: List<SignalItem>,
         conflictResolution: ConflictResolution
-    ): ImportResult {
+    ): ImportConflictResolutionResult? {
         return try {
             val exportData = json.decodeFromString<WeeklySignalExportData>(jsonString)
             
             // Validate the imported data
             val validationResult = validateImportData(exportData)
             if (validationResult != null) {
-                return ImportResult.Error(validationResult)
+                return null
             }
             
             val importedSignalItems = exportData.toSignalItems()
             val conflictResolver = ImportConflictResolver()
             
             // Resolve conflicts
-            val resolvedSignalItems = conflictResolver.resolveConflicts(
+            conflictResolver.resolveConflicts(
                 existingSignalItems,
                 importedSignalItems,
                 conflictResolution
             )
-            
-            ImportResult.Success(resolvedSignalItems)
         } catch (e: Exception) {
-            ImportResult.Error("Failed to import signal items with conflict resolution: ${e.message}")
+            null
         }
     }
     
@@ -261,6 +259,11 @@ enum class ConflictResolution {
     MERGE_TIME_SLOTS
 }
 
+data class ImportConflictResolutionResult(
+    val itemsToInsert: List<SignalItem>,
+    val itemsToUpdate: List<SignalItem>
+)
+
 class ImportConflictResolver {
     
     fun findConflicts(
@@ -275,35 +278,32 @@ class ImportConflictResolver {
         existingSignalItems: List<SignalItem>,
         importedSignalItems: List<SignalItem>,
         conflictResolution: ConflictResolution
-    ): List<SignalItem> {
+    ): ImportConflictResolutionResult {
         val existingMap = existingSignalItems.associateBy { it.id }
-        val importedMap = importedSignalItems.associateBy { it.id }
         
-        val result = mutableListOf<SignalItem>()
-        
-        // Add all existing items first
-        result.addAll(existingSignalItems)
+        val itemsToInsert = mutableListOf<SignalItem>()
+        val itemsToUpdate = mutableListOf<SignalItem>()
         
         // Process imported items
         importedSignalItems.forEach { importedItem ->
             val existingItem = existingMap[importedItem.id]
             
             if (existingItem == null) {
-                // New item, add it
-                result.add(importedItem)
+                // New item, add to insert list
+                itemsToInsert.add(importedItem)
             } else {
                 // Conflict, resolve based on strategy
                 when (conflictResolution) {
                     ConflictResolution.REPLACE_EXISTING -> {
-                        // Replace the existing item
-                        result.removeAll { it.id == importedItem.id }
-                        result.add(importedItem)
+                        // Replace the existing item (update with imported item)
+                        itemsToUpdate.add(importedItem)
                     }
                     ConflictResolution.KEEP_EXISTING -> {
-                        // Keep existing, do nothing
+                        // Keep existing, skip this imported item
+                        // Do nothing - don't add to either list
                     }
                     ConflictResolution.MERGE_TIME_SLOTS -> {
-                        // Merge time slots
+                        // Merge time slots - keep existing SignalItem settings but add new TimeSlots
                         val existingTimeSlotIds = existingItem.timeSlots.map { it.id }.toSet()
                         val newTimeSlots = importedItem.timeSlots.filter { it.id !in existingTimeSlotIds }
                         
@@ -311,15 +311,15 @@ class ImportConflictResolver {
                             val mergedItem = existingItem.copy(
                                 timeSlots = existingItem.timeSlots + newTimeSlots
                             )
-                            result.removeAll { it.id == importedItem.id }
-                            result.add(mergedItem)
+                            itemsToUpdate.add(mergedItem)
                         }
+                        // If no new TimeSlots to add, skip this item
                     }
                 }
             }
         }
         
-        return result
+        return ImportConflictResolutionResult(itemsToInsert, itemsToUpdate)
     }
 }
 

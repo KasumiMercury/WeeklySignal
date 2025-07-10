@@ -234,4 +234,39 @@ class AndroidSignalDatabaseService(
             Result.failure(e)
         }
     }
+    
+    override suspend fun importSignalItemsWithConflictResolution(
+        itemsToInsert: List<SignalItem>,
+        itemsToUpdate: List<SignalItem>
+    ): Result<Unit> {
+        return try {
+            // Insert new items
+            itemsToInsert.forEach { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                databaseRepository.insertSignal(signalEntity)
+                
+                signalItem.timeSlots.forEach { timeSlot ->
+                    val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
+                    databaseRepository.insertTimeSlot(timeSlotEntity)
+                }
+            }
+            
+            // Update existing items
+            itemsToUpdate.forEach { signalItem ->
+                val signalEntity = signalItem.toSignalEntity()
+                databaseRepository.updateSignal(signalEntity)
+                
+                databaseRepository.deleteTimeSlotsBySignalId(signalItem.id)
+                
+                signalItem.timeSlots.forEach { timeSlot ->
+                    val timeSlotEntity = timeSlot.toTimeSlotEntity(signalItem.id)
+                    databaseRepository.insertTimeSlot(timeSlotEntity)
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

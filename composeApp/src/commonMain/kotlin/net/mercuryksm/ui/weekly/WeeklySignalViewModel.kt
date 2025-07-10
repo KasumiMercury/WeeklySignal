@@ -8,6 +8,7 @@ import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.ExportSelectionState
+import net.mercuryksm.data.ImportConflictResolutionResult
 import net.mercuryksm.notification.SignalAlarmManager
 
 class WeeklySignalViewModel(
@@ -26,8 +27,8 @@ class WeeklySignalViewModel(
     private val _importedItems = MutableStateFlow<List<SignalItem>>(emptyList())
     val importedItems: StateFlow<List<SignalItem>> = _importedItems.asStateFlow()
     
-    private val _selectedImportItems = MutableStateFlow<List<SignalItem>>(emptyList())
-    val selectedImportItems: StateFlow<List<SignalItem>> = _selectedImportItems.asStateFlow()
+    private val _selectedImportResult = MutableStateFlow<ImportConflictResolutionResult?>(null)
+    val selectedImportResult: StateFlow<ImportConflictResolutionResult?> = _selectedImportResult.asStateFlow()
 
     init {
         // Observe repository changes and update StateFlow
@@ -176,24 +177,25 @@ class WeeklySignalViewModel(
         _importedItems.value = emptyList()
     }
     
-    fun setSelectedImportItems(items: List<SignalItem>) {
-        _selectedImportItems.value = items
+    fun setSelectedImportResult(result: ImportConflictResolutionResult) {
+        _selectedImportResult.value = result
     }
     
-    fun clearSelectedImportItems() {
-        _selectedImportItems.value = emptyList()
+    fun clearSelectedImportResult() {
+        _selectedImportResult.value = null
     }
     
     // Improved import methods with transaction support and conflict resolution
     fun importSignalItemsWithConflictResolution(
-        signalItems: List<SignalItem>,
+        itemsToInsert: List<SignalItem>,
+        itemsToUpdate: List<SignalItem>,
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val result = signalRepository.addSignalItemsInTransaction(signalItems)
+            val result = signalRepository.importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)
             result.onSuccess {
                 // Schedule alarms for all imported SignalItems
-                signalItems.forEach { signalItem ->
+                (itemsToInsert + itemsToUpdate).forEach { signalItem ->
                     scheduleSignalItemAlarms(signalItem)
                 }
             }

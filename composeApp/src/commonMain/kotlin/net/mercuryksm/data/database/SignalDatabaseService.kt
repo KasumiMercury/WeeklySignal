@@ -15,6 +15,10 @@ interface SignalDatabaseService {
     suspend fun saveSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
     suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
     suspend fun deleteSignalItemsInTransaction(signalIds: List<String>): Result<Unit>
+    suspend fun importSignalItemsWithConflictResolution(
+        itemsToInsert: List<SignalItem>,
+        itemsToUpdate: List<SignalItem>
+    ): Result<Unit>
     
     // Alarm state management methods
     suspend fun saveAlarmState(alarmState: AlarmStateEntity): Result<Unit>

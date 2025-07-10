@@ -19,7 +19,7 @@ fun ImportSelectionScreen(
     importedItems: List<SignalItem>,
     existingItems: List<SignalItem>,
     onBackPressed: () -> Unit,
-    onImportSelected: (List<SignalItem>) -> Unit
+    onImportSelected: (ImportConflictResolutionResult) -> Unit
 ) {
     var selectionState by remember { mutableStateOf(ExportSelectionState()) }
     var showConflictDialog by remember { mutableStateOf(false) }
@@ -102,7 +102,12 @@ fun ImportSelectionScreen(
                             if (conflicts.isNotEmpty()) {
                                 showConflictDialog = true
                             } else {
-                                onImportSelected(selectionState.selectedSignalItemsWithTimeSlots)
+                                // No conflicts, all selected items are new items to insert
+                                val result = ImportConflictResolutionResult(
+                                    itemsToInsert = selectionState.selectedSignalItemsWithTimeSlots,
+                                    itemsToUpdate = emptyList()
+                                )
+                                onImportSelected(result)
                             }
                         },
                         enabled = selectionState.hasSelection,
@@ -235,12 +240,12 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
+                                val result = conflictResolver.resolveConflicts(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.REPLACE_EXISTING
                                 )
-                                onImportSelected(resolvedItems)
+                                onImportSelected(result)
                             }
                         ) {
                             Text("Replace Existing")
@@ -250,12 +255,12 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
+                                val result = conflictResolver.resolveConflicts(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.KEEP_EXISTING
                                 )
-                                onImportSelected(resolvedItems)
+                                onImportSelected(result)
                             }
                         ) {
                             Text("Keep Existing")
@@ -269,12 +274,12 @@ fun ImportSelectionScreen(
                             onClick = {
                                 showConflictDialog = false
                                 val selectedItems = selectionState.selectedSignalItemsWithTimeSlots
-                                val resolvedItems = conflictResolver.resolveConflicts(
+                                val result = conflictResolver.resolveConflicts(
                                     existingItems,
                                     selectedItems,
                                     ConflictResolution.MERGE_TIME_SLOTS
                                 )
-                                onImportSelected(resolvedItems)
+                                onImportSelected(result)
                             }
                         ) {
                             Text("Merge Time Slots")
