@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.jk1.licenseReport)
     kotlin("plugin.serialization") version "2.2.0"
 }
 
@@ -96,6 +97,27 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+}
+
+licenseReport {
+    outputDir = "${layout.buildDirectory.get().asFile}/reports/dependency-license"
+    configurations = arrayOf(
+        "androidRuntimeClasspath",
+        "desktopRuntimeClasspath"
+    )
+    renderers = arrayOf(
+        com.github.jk1.license.render.InventoryHtmlReportRenderer("license-report.html", "WeeklySignal License Report"),
+        com.github.jk1.license.render.JsonReportRenderer("licenses.json"),
+        com.github.jk1.license.render.TextReportRenderer("licenses.txt")
+    )
+    filters = arrayOf(
+        com.github.jk1.license.filter.LicenseBundleNormalizer(),
+        com.github.jk1.license.filter.ExcludeTransitiveDependenciesFilter()
+    )
+    allowedLicensesFile = file("${layout.projectDirectory.asFile}/allowed-licenses.json")
+    excludeGroups = arrayOf("net.mercuryksm")
+    excludeOwnGroup = true
+    excludeBoms = true
 }
 
 compose.desktop {
