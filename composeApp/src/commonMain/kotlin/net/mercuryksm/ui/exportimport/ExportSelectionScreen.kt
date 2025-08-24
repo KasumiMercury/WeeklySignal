@@ -32,7 +32,7 @@ fun ExportSelectionScreen(
         selectionState = SelectionStateManager.createInitialState(signalItems)
     }
     
-    val exportImportService = remember { ExportImportService() }
+    val exportService = remember { ExportService() }
     
     Scaffold(
         topBar = {
@@ -179,7 +179,7 @@ fun ExportSelectionScreen(
     
     // Confirmation Dialog
     if (showConfirmDialog) {
-        val exportSummary = exportImportService.getExportSummary(selectionState)
+        val exportSummary = exportService.getExportSummary(selectionState)
         
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },

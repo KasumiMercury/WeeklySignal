@@ -16,10 +16,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import net.mercuryksm.data.DayOfWeekJp
@@ -35,6 +32,9 @@ class AndroidSignalAlarmManager(
     private val context: Context,
     private val databaseService: SignalDatabaseService
 ) : SignalAlarmManager {
+
+    // Use a supervised scope for background operations
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private const val CHANNEL_ID_BASE = "weekly_signal_alarms"
@@ -501,7 +501,7 @@ class AndroidSignalAlarmManager(
             
             if (allAlarmIds.isNotEmpty()) {
                 // Migrate alarm data to Room database
-                GlobalScope.launch(Dispatchers.IO) {
+                scope.launch {
                     try {
                         allAlarmIds.forEach { alarmIdStr ->
                             val alarmId = alarmIdStr.toIntOrNull() ?: return@forEach

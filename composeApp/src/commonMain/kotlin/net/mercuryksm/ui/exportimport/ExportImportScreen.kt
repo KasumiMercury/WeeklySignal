@@ -38,7 +38,8 @@ fun ExportImportScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf("") }
     
-    val exportImportService = remember { ExportImportService() }
+    val exportService = remember { ExportService() }
+    val importService = remember { ImportService() }
     val coroutineScope = rememberCoroutineScope()
     
     // Create file operations service based on platform
@@ -48,16 +49,16 @@ fun ExportImportScreen(
         isExporting = true
         
         try {
-            val exportResult = exportImportService.exportSelectedSignalItems(selectionState)
+            val exportResult = exportService.exportSelectedSignalItems(selectionState)
             
             when (exportResult) {
                 is ExportResult.Success -> {
-                    val fileName = exportImportService.generateSelectiveFileName(selectionState)
+                    val fileName = exportService.generateSelectiveFileName(selectionState)
                     val fileResult = fileOperationsService.exportToFile(exportResult.exportData, fileName)
                     
                     when (fileResult) {
                         is FileOperationResult.Success -> {
-                            val exportSummary = exportImportService.getExportSummary(selectionState)
+                            val exportSummary = exportService.getExportSummary(selectionState)
                             val summaryMessage = "Successfully exported ${exportSummary.selectedSignalItemCount} signal items with ${exportSummary.selectedTimeSlotCount} time slots"
                             dialogMessage = "$summaryMessage\n\n${fileResult.message}"
                             showSuccessDialog = true
@@ -136,7 +137,7 @@ fun ExportImportScreen(
             when (fileResult) {
                 is FileReadResult.Success -> {
                     // Use the new conflict check method to provide better user experience
-                    val conflictCheckResult = exportImportService.checkForConflicts(
+                    val conflictCheckResult = importService.checkForConflicts(
                         fileResult.content,
                         signalItems
                     )
