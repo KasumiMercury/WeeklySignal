@@ -45,7 +45,7 @@ fun SelectableSignalItemList(
             onSelectAllChanged = onSelectAllChanged
         )
         
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(vertical = 8.dp),
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
         )
@@ -239,7 +239,7 @@ private fun SelectableSignalItemCard(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp)
                 ) {
-                    Divider(
+                    HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
