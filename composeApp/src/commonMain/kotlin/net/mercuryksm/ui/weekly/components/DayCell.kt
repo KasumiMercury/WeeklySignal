@@ -23,7 +23,8 @@ fun DayCell(
     dayOfWeek: DayOfWeekJp,
     items: List<SignalItem>,
     onItemClick: (SignalItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    timeSlot: net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot? = null
 ) {
     Column(
         modifier = modifier
@@ -52,6 +53,7 @@ fun DayCell(
                     items = items,
                     dayOfWeek = dayOfWeek,
                     onItemClick = onItemClick,
+                    timeSlot = timeSlot,
                     modifier = Modifier.Companion.padding(WeeklyGridConstants.CELL_PADDING)
                 )
             }
@@ -67,7 +69,8 @@ private fun MultipleSignalItemsCell(
     items: List<SignalItem>,
     dayOfWeek: DayOfWeekJp,
     onItemClick: (SignalItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    timeSlot: net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot? = null
 ) {
     var showModal by remember { mutableStateOf(false) }
     
@@ -99,7 +102,7 @@ private fun MultipleSignalItemsCell(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    val timeText = timeSlot?.getDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
                         fontSize = 14.sp,
@@ -147,7 +150,7 @@ private fun MultipleSignalItemsCell(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    val timeText = timeSlot?.getDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
                         fontSize = 14.sp,
@@ -217,7 +220,7 @@ private fun MultipleSignalItemsCell(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    val timeText = items.first().timeSlots.find { it.dayOfWeek == dayOfWeek }?.getTimeDisplayText() ?: "--:--"
+                    val timeText = timeSlot?.getDisplayText() ?: "--:--"
                     Text(
                         text = timeText,
                         fontSize = 14.sp,

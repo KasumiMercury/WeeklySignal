@@ -186,6 +186,7 @@ private fun TimeSlotColumn(
                 dayOfWeek = dayOfWeek,
                 items = items,
                 onItemClick = onItemClick,
+                timeSlot = timeSlot,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
