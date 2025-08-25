@@ -89,31 +89,13 @@ class AlarmReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(createMainActivityIntent(context))
-            .apply {
-                if (alarmInfo.sound) {
-                    // Use channel default sound
-                    // Start playing alarm sound and manage it for potential stopping
-                    playAndManageAlarmSound(context, alarmInfo.alarmId)
-                } else {
-                    // Disable sound for this notification
-                    setSound(null)
-                }
-                
-                if (alarmInfo.vibration) {
-                    // Enable vibration for this notification
-                    setVibrate(VIBRATION_PATTERN)
-                } else {
-                    // Disable vibration for this notification
-                    setVibrate(null)
-                }
-                
-                // Dismiss action (no snooze per requirements)
-                addAction(
-                    android.R.drawable.ic_menu_close_clear_cancel,
-                    "Dismiss",
-                    createDismissIntent(context, alarmInfo.alarmId, notificationId)
-                )
-            }
+            .setSound(null) // Always disable notification sound, handle manually
+            .setVibrate(null) // Always disable notification vibration, handle manually
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Dismiss",
+                createDismissIntent(context, alarmInfo.alarmId, notificationId)
+            )
         
         // Show notification
         val notificationManager = NotificationManagerCompat.from(context)
@@ -121,7 +103,12 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.notify(notificationId, notificationBuilder.build())
         }
         
-        // Vibration - only trigger if enabled in AlarmInfo
+        // Handle sound manually - only if enabled
+        if (alarmInfo.sound) {
+            playAndManageAlarmSound(context, alarmInfo.alarmId)
+        }
+        
+        // Handle vibration manually - only if enabled
         if (alarmInfo.vibration) {
             triggerVibration(context)
         }
