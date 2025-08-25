@@ -26,6 +26,7 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val DISMISS_ACTION = "DISMISS_ALARM"
         private const val DISMISS_TEST_ALARM_ACTION = "DISMISS_TEST_ALARM"
         private const val DELETE_ALARM_ACTION = "DELETE_ALARM"
+        private const val DELETE_TEST_ALARM_ACTION = "DELETE_TEST_ALARM"
         private const val ALARM_AUTO_STOP_DELAY_MS = 60000L // 1 minute
         private val VIBRATION_PATTERN = longArrayOf(0, 500, 500) // 0.5s on, 0.5s off
 
@@ -44,6 +45,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 DISMISS_ACTION -> handleDismiss(context, intent)
                 DISMISS_TEST_ALARM_ACTION -> handleTestAlarmDismiss(context, intent)
                 DELETE_ALARM_ACTION -> handleDelete(context, intent)
+                DELETE_TEST_ALARM_ACTION -> handleTestAlarmDelete(context, intent)
                 else -> handleAlarm(context, intent)
             }
         } catch (e: Exception) {
@@ -207,12 +209,21 @@ class AlarmReceiver : BroadcastReceiver() {
     private fun handleTestAlarmDismiss(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notification_id", 0)
         
-        // Stop test alarm sound if it's playing
+        // Stop test alarm sound and vibration if they're playing
         stopAlarmSound("test_alarm")
+        stopVibration("test_alarm")
         
         // Clear notification
         val notificationManager = NotificationManagerCompat.from(context)
         notificationManager.cancel(notificationId)
+    }
+    
+    private fun handleTestAlarmDelete(context: Context, intent: Intent) {
+        val notificationId = intent.getIntExtra("notification_id", 0)
+        
+        // Stop test alarm sound and vibration when notification is swiped away
+        stopAlarmSound("test_alarm")
+        stopVibration("test_alarm")
     }
     
     private fun handleDelete(context: Context, intent: Intent) {
@@ -276,6 +287,20 @@ class AlarmReceiver : BroadcastReceiver() {
         return PendingIntent.getBroadcast(
             context,
             "${alarmId}_delete".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+    
+    private fun createTestAlarmDeleteIntent(context: Context, notificationId: Int): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = DELETE_TEST_ALARM_ACTION
+            putExtra("notification_id", notificationId)
+        }
+        
+        return PendingIntent.getBroadcast(
+            context,
+            "test_alarm_delete".hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -385,6 +410,46 @@ class AlarmReceiver : BroadcastReceiver() {
             activeVibrators.clear()
         } catch (e: Exception) {
             // Failed to stop all vibrations, ignore
+        }
+    }
+    
+    // Test alarm unified processing method
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun showTestAlarmNotification(context: Context, alarmInfo: AndroidSignalAlarmManager.AlarmInfo) {
+        val notificationId = 1001 // TEST_NOTIFICATION_ID
+        
+        // Create test alarm notification with unified processing
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(alarmInfo.title)
+            .setContentText(alarmInfo.message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(true)
+            .setContentIntent(createMainActivityIntent(context))
+            .setSound(null) // Always disable notification sound, handle manually
+            .setVibrate(null) // Always disable notification vibration, handle manually
+            .setDeleteIntent(createTestAlarmDeleteIntent(context, notificationId))
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Dismiss",
+                createTestAlarmDismissIntent(context, notificationId)
+            )
+        
+        // Show notification
+        val notificationManager = NotificationManagerCompat.from(context)
+        if (notificationManager.areNotificationsEnabled()) {
+            notificationManager.notify(notificationId, notificationBuilder.build())
+        }
+        
+        // Handle sound manually - only if enabled
+        if (alarmInfo.sound) {
+            playAndManageAlarmSound(context, "test_alarm")
+        }
+        
+        // Handle vibration manually - only if enabled
+        if (alarmInfo.vibration) {
+            triggerContinuousVibration(context, "test_alarm")
         }
     }
     
