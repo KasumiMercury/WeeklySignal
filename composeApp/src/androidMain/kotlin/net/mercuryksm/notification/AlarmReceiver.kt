@@ -25,10 +25,15 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
         private const val DISMISS_TEST_ALARM_ACTION = "DISMISS_TEST_ALARM"
-        private val VIBRATION_PATTERN = longArrayOf(0, 300, 200, 300)
+        private const val DELETE_ALARM_ACTION = "DELETE_ALARM"
+        private const val DELETE_TEST_ALARM_ACTION = "DELETE_TEST_ALARM"
+        private const val ALARM_AUTO_STOP_DELAY_MS = 60000L // 1 minute
+        private val VIBRATION_PATTERN = longArrayOf(0, 500, 500) // 0.5s on, 0.5s off
 
         // Static management of Ringtone objects for alarm sound control
         val activeRingtones = ConcurrentHashMap<String, Ringtone>()
+        // Static management of Vibrator objects for continuous vibration control
+        val activeVibrators = ConcurrentHashMap<String, Vibrator>()
     }
     
     private val json = Json { ignoreUnknownKeys = true }
@@ -39,6 +44,8 @@ class AlarmReceiver : BroadcastReceiver() {
             when (intent.action) {
                 DISMISS_ACTION -> handleDismiss(context, intent)
                 DISMISS_TEST_ALARM_ACTION -> handleTestAlarmDismiss(context, intent)
+                DELETE_ALARM_ACTION -> handleDelete(context, intent)
+                DELETE_TEST_ALARM_ACTION -> handleTestAlarmDelete(context, intent)
                 else -> handleAlarm(context, intent)
             }
         } catch (e: Exception) {
@@ -89,31 +96,14 @@ class AlarmReceiver : BroadcastReceiver() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(createMainActivityIntent(context))
-            .apply {
-                if (alarmInfo.sound) {
-                    // Use channel default sound
-                    // Start playing alarm sound and manage it for potential stopping
-                    playAndManageAlarmSound(context, alarmInfo.alarmId)
-                } else {
-                    // Disable sound for this notification
-                    setSound(null)
-                }
-                
-                if (alarmInfo.vibration) {
-                    // Enable vibration for this notification
-                    setVibrate(VIBRATION_PATTERN)
-                } else {
-                    // Disable vibration for this notification
-                    setVibrate(null)
-                }
-                
-                // Dismiss action (no snooze per requirements)
-                addAction(
-                    android.R.drawable.ic_menu_close_clear_cancel,
-                    "Dismiss",
-                    createDismissIntent(context, alarmInfo.alarmId, notificationId)
-                )
-            }
+            .setSound(null) // Always disable notification sound, handle manually
+            .setVibrate(null) // Always disable notification vibration, handle manually
+            .setDeleteIntent(createDeleteIntent(context, alarmInfo.alarmId, notificationId))
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Dismiss",
+                createDismissIntent(context, alarmInfo.alarmId, notificationId)
+            )
         
         // Show notification
         val notificationManager = NotificationManagerCompat.from(context)
@@ -121,10 +111,23 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.notify(notificationId, notificationBuilder.build())
         }
         
-        // Vibration - only trigger if enabled in AlarmInfo
-        if (alarmInfo.vibration) {
-            triggerVibration(context)
+        // Handle sound manually - only if enabled
+        if (alarmInfo.sound) {
+            playAndManageAlarmSound(context, alarmInfo.alarmId)
         }
+        
+        // Handle vibration manually - only if enabled
+        if (alarmInfo.vibration) {
+            triggerContinuousVibration(context, alarmInfo.alarmId)
+        }
+        
+        // Set auto-stop timer for 1 minute
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            stopAlarmSound(alarmInfo.alarmId)
+            stopVibration(alarmInfo.alarmId)
+            val notificationManager = NotificationManagerCompat.from(context)
+            notificationManager.cancel(notificationId)
+        }, ALARM_AUTO_STOP_DELAY_MS)
     }
     
     private fun scheduleNextWeekAlarm(
@@ -194,8 +197,9 @@ class AlarmReceiver : BroadcastReceiver() {
         val notificationId = intent.getIntExtra("notification_id", 0)
         val alarmId = intent.getStringExtra("alarm_id") ?: ""
         
-        // Stop alarm sound if it's playing
+        // Stop alarm sound and vibration if they're playing
         stopAlarmSound(alarmId)
+        stopVibration(alarmId)
         
         // Clear notification
         val notificationManager = NotificationManagerCompat.from(context)
@@ -205,12 +209,30 @@ class AlarmReceiver : BroadcastReceiver() {
     private fun handleTestAlarmDismiss(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notification_id", 0)
         
-        // Stop test alarm sound if it's playing
+        // Stop test alarm sound and vibration if they're playing
         stopAlarmSound("test_alarm")
+        stopVibration("test_alarm")
         
         // Clear notification
         val notificationManager = NotificationManagerCompat.from(context)
         notificationManager.cancel(notificationId)
+    }
+    
+    private fun handleTestAlarmDelete(context: Context, intent: Intent) {
+        val notificationId = intent.getIntExtra("notification_id", 0)
+        
+        // Stop test alarm sound and vibration when notification is swiped away
+        stopAlarmSound("test_alarm")
+        stopVibration("test_alarm")
+    }
+    
+    private fun handleDelete(context: Context, intent: Intent) {
+        val notificationId = intent.getIntExtra("notification_id", 0)
+        val alarmId = intent.getStringExtra("alarm_id") ?: ""
+        
+        // Stop alarm sound and vibration when notification is swiped away
+        stopAlarmSound(alarmId)
+        stopVibration(alarmId)
     }
     
     private fun createMainActivityIntent(context: Context): PendingIntent {
@@ -255,6 +277,35 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
     
+    private fun createDeleteIntent(context: Context, alarmId: String, notificationId: Int): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = DELETE_ALARM_ACTION
+            putExtra("alarm_id", alarmId)
+            putExtra("notification_id", notificationId)
+        }
+        
+        return PendingIntent.getBroadcast(
+            context,
+            "${alarmId}_delete".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+    
+    private fun createTestAlarmDeleteIntent(context: Context, notificationId: Int): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = DELETE_TEST_ALARM_ACTION
+            putExtra("notification_id", notificationId)
+        }
+        
+        return PendingIntent.getBroadcast(
+            context,
+            "test_alarm_delete".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+    
     @RequiresApi(Build.VERSION_CODES.O)
     private fun triggerVibration(context: Context) {
         try {
@@ -269,6 +320,28 @@ class AlarmReceiver : BroadcastReceiver() {
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
+            }
+        } catch (e: Exception) {
+            // Vibration failed, ignore
+        }
+    }
+    
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun triggerContinuousVibration(context: Context, alarmId: String) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12+: Use VibratorManager for better control
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                val vibrator = vibratorManager.defaultVibrator
+                // Continuous vibration: repeat pattern (index 0 = repeat from start)
+                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, 0))
+                activeVibrators[alarmId] = vibrator
+            } else {
+                // Android 7-11: Use VibrationEffect with legacy Vibrator
+                @Suppress("DEPRECATION")
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, 0))
+                activeVibrators[alarmId] = vibrator
             }
         } catch (e: Exception) {
             // Vibration failed, ignore
@@ -307,6 +380,15 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
+    private fun stopVibration(alarmId: String) {
+        try {
+            val vibrator = activeVibrators.remove(alarmId)
+            vibrator?.cancel()
+        } catch (e: Exception) {
+            // Failed to stop vibration, ignore
+        }
+    }
+    
     private fun stopAllAlarmSounds() {
         try {
             activeRingtones.values.forEach { ringtone ->
@@ -317,6 +399,57 @@ class AlarmReceiver : BroadcastReceiver() {
             activeRingtones.clear()
         } catch (e: Exception) {
             // Failed to stop all alarm sounds, ignore
+        }
+    }
+    
+    private fun stopAllVibrations() {
+        try {
+            activeVibrators.values.forEach { vibrator ->
+                vibrator.cancel()
+            }
+            activeVibrators.clear()
+        } catch (e: Exception) {
+            // Failed to stop all vibrations, ignore
+        }
+    }
+    
+    // Test alarm unified processing method
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun showTestAlarmNotification(context: Context, alarmInfo: AndroidSignalAlarmManager.AlarmInfo) {
+        val notificationId = 1001 // TEST_NOTIFICATION_ID
+        
+        // Create test alarm notification with unified processing
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(alarmInfo.title)
+            .setContentText(alarmInfo.message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setAutoCancel(true)
+            .setContentIntent(createMainActivityIntent(context))
+            .setSound(null) // Always disable notification sound, handle manually
+            .setVibrate(null) // Always disable notification vibration, handle manually
+            .setDeleteIntent(createTestAlarmDeleteIntent(context, notificationId))
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Dismiss",
+                createTestAlarmDismissIntent(context, notificationId)
+            )
+        
+        // Show notification
+        val notificationManager = NotificationManagerCompat.from(context)
+        if (notificationManager.areNotificationsEnabled()) {
+            notificationManager.notify(notificationId, notificationBuilder.build())
+        }
+        
+        // Handle sound manually - only if enabled
+        if (alarmInfo.sound) {
+            playAndManageAlarmSound(context, "test_alarm")
+        }
+        
+        // Handle vibration manually - only if enabled
+        if (alarmInfo.vibration) {
+            triggerContinuousVibration(context, "test_alarm")
         }
     }
     

@@ -43,7 +43,10 @@ class AndroidSignalAlarmManager(
         private const val ALARM_SOUND_URI = "content://settings/system/notification_sound"
         private val VIBRATION_PATTERN = longArrayOf(0, 300, 200, 300)
         private const val TEST_NOTIFICATION_ID = 1001
-        private const val TEST_NOTIFICATION_DELAY_MS = 5000L
+        private const val TEST_ALARM_DELAY_MS = 60000L // 60 seconds like production alarms
+        
+        // Handler for managing test alarm timeout
+        private var testAlarmHandler: Handler? = null
         
         // SharedPreferences keys (for migration from legacy data only)
         private const val PREFS_NAME = "weekly_signal_alarms"
@@ -189,70 +192,42 @@ class AndroidSignalAlarmManager(
                     return@withContext AlarmResult.PERMISSION_DENIED
                 }
 
-                // Use main notification channel (now silent)
-                val notification = NotificationCompat.Builder(context, CHANNEL_ID_BASE)
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setContentTitle(settings.title)
-                    .setContentText(settings.message)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true)
-                    .setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setSound(null) // Always silent, sound is handled manually
-                    .apply {
-                        if (settings.vibration) {
-                            setVibrate(VIBRATION_PATTERN)
-                        } else {
-                            setVibrate(null)
-                        }
-                        
-                        // Add dismiss action to stop sound when notification is dismissed
-                        addAction(
-                            android.R.drawable.ic_menu_close_clear_cancel,
-                            "Dismiss",
-                            AlarmReceiver().createTestAlarmDismissIntent(context, TEST_NOTIFICATION_ID)
-                        )
-                    }
-                    .build()
+                // Cancel any existing test alarm handler to prevent conflicts
+                testAlarmHandler?.removeCallbacksAndMessages(null)
+                testAlarmHandler = null
 
-                val notificationManager = NotificationManagerCompat.from(context)
-                if (notificationManager.areNotificationsEnabled()) {
-                    notificationManager.notify(TEST_NOTIFICATION_ID, notification)
-                }
+                // Create test alarm info for unified processing
+                val testAlarmInfo = AndroidSignalAlarmManager.AlarmInfo(
+                    alarmId = "test_alarm",
+                    signalItemId = "test",
+                    timeSlotId = "test_slot",
+                    title = settings.title,
+                    message = settings.message,
+                    sound = settings.sound,
+                    vibration = settings.vibration,
+                    hour = 0,
+                    minute = 0,
+                    dayOfWeek = 0
+                )
 
-                // Manual sound playback - only if sound is enabled
-                if (settings.sound) {
-                    try {
-                        val alarmUri = getAlarmSoundUri()
-                        val ringtone = RingtoneManager.getRingtone(context, alarmUri)
-                        ringtone?.let {
-                            // Explicitly set audio attributes to use the alarm stream
-                            it.audioAttributes = AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_ALARM)
-                                .build()
-                            // Store the ringtone with a test alarm ID so it can be stopped
-                            AlarmReceiver.activeRingtones["test_alarm"] = it
-                            it.play()
-                        }
-                    } catch (e: Exception) {
-                        // Log or handle error if ringtone fails to play
-                        e.printStackTrace()
-                    }
-                }
+                // Use AlarmReceiver for unified test alarm processing
+                val alarmReceiver = AlarmReceiver()
+                alarmReceiver.showTestAlarmNotification(context, testAlarmInfo)
 
-                if (settings.vibration) {
-                    triggerVibration()
-                }
-
-                // Stop the sound and cancel the notification after a delay
-                Handler(Looper.getMainLooper()).postDelayed({
-                    // Stop test alarm sound using AlarmReceiver's management
+                // Set up new timeout handler
+                testAlarmHandler = Handler(Looper.getMainLooper())
+                testAlarmHandler?.postDelayed({
+                    // Auto-stop test alarm after 60 seconds
                     AlarmReceiver.activeRingtones.remove("test_alarm")?.let { ringtone ->
                         if (ringtone.isPlaying) {
                             ringtone.stop()
                         }
                     }
+                    AlarmReceiver.activeVibrators.remove("test_alarm")?.cancel()
+                    val notificationManager = NotificationManagerCompat.from(context)
                     notificationManager.cancel(TEST_NOTIFICATION_ID)
-                }, TEST_NOTIFICATION_DELAY_MS)
+                    testAlarmHandler = null
+                }, TEST_ALARM_DELAY_MS)
 
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
