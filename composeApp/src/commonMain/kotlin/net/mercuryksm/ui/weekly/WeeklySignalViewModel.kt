@@ -10,6 +10,7 @@ import net.mercuryksm.data.SignalRepository
 import net.mercuryksm.data.ExportSelectionState
 import net.mercuryksm.data.ImportConflictResolutionResult
 import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.ui.components.OperationStatus
 import net.mercuryksm.ui.coordination.ImportExportCoordinator
 import net.mercuryksm.ui.coordination.AlarmCoordinator
 
@@ -25,6 +26,10 @@ class WeeklySignalViewModel(
     // Coordinators for specialized responsibilities
     private val importExportCoordinator = ImportExportCoordinator()
     private val alarmCoordinator = AlarmCoordinator(alarmManager, viewModelScope)
+    
+    // Deletion status for WeeklySignalView modal display
+    private val _deletionStatus = MutableStateFlow<OperationStatus?>(null)
+    val deletionStatus: StateFlow<OperationStatus?> = _deletionStatus.asStateFlow()
     
     // Expose coordinator state
     val exportSelectionState: StateFlow<ExportSelectionState?> = importExportCoordinator.exportSelectionState
@@ -44,8 +49,13 @@ class WeeklySignalViewModel(
         viewModelScope.launch {
             val result = signalRepository.addSignalItem(signalItem)
             result.onSuccess {
-                // Schedule alarms for the new SignalItem
-                alarmCoordinator.scheduleSignalItemAlarms(signalItem)
+                // Schedule alarms for the new SignalItem - await completion
+                try {
+                    alarmCoordinator.scheduleSignalItemAlarms(signalItem)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Log alarm scheduling error but don't fail the overall operation
+                }
             }
             onResult(result)
         }
@@ -54,27 +64,45 @@ class WeeklySignalViewModel(
     fun updateSignalItem(signalItem: SignalItem, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
             val oldSignalItem = getSignalItemById(signalItem.id)
-            val result = signalRepository.updateSignalItem(signalItem)
-            result.onSuccess {
-                // Update alarms for the modified SignalItem
+            
+            // First, update alarms before database update (as per requirements)
+            try {
                 if (oldSignalItem != null) {
                     alarmCoordinator.updateSignalItemAlarms(oldSignalItem, signalItem)
                 } else {
                     alarmCoordinator.scheduleSignalItemAlarms(signalItem)
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Log alarm update error but don't fail the overall operation
             }
+            
+            // Then update database
+            val result = signalRepository.updateSignalItem(signalItem)
             onResult(result)
         }
     }
     
-    fun removeSignalItem(signalItem: SignalItem, onResult: (Result<Unit>) -> Unit = {}) {
+    fun removeSignalItem(signalItem: SignalItem, onResult: (Result<Pair<Boolean, Boolean>>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = signalRepository.removeSignalItem(signalItem)
-            result.onSuccess {
-                // Cancel alarms for the removed SignalItem
-                alarmCoordinator.cancelSignalItemAlarms(signalItem)
+            // First, cancel alarms before removing from database and WAIT for completion
+            val alarmsCancelled = try {
+                alarmCoordinator.cancelSignalItemAlarms(signalItem) // Now properly awaits completion
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false // Alarm cancellation failed
+                // Continue with database deletion even if alarm cancellation fails
             }
-            onResult(result)
+            
+            // Then remove from database
+            val databaseResult = signalRepository.removeSignalItem(signalItem)
+            
+            // Return both database deletion success and alarm cancellation success
+            val combinedResult = databaseResult.map { 
+                Pair(databaseResult.isSuccess, alarmsCancelled)
+            }
+            
+            onResult(combinedResult)
         }
     }
     
@@ -101,8 +129,13 @@ class WeeklySignalViewModel(
         viewModelScope.launch {
             val result = signalRepository.clearAllSignalItems()
             result.onSuccess {
-                // Cancel all alarms
-                alarmCoordinator.cancelSignalItemsAlarms(signalItems.value)
+                // Cancel all alarms - await completion
+                try {
+                    alarmCoordinator.cancelSignalItemsAlarms(signalItems.value)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Log alarm cancellation error but don't fail the overall operation
+                }
             }
             onResult(result)
         }
@@ -138,6 +171,40 @@ class WeeklySignalViewModel(
         importExportCoordinator.clearSelectedImportResult()
     }
     
+    // Deletion status management
+    fun setDeletionStatus(status: OperationStatus?) {
+        _deletionStatus.value = status
+    }
+    
+    fun clearDeletionStatus() {
+        _deletionStatus.value = null
+    }
+    
+    fun removeTimeSlotFromSignalItem(
+        signalItem: SignalItem, 
+        timeSlot: net.mercuryksm.data.TimeSlot, 
+        onResult: (Result<Pair<Boolean, Boolean>>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            // First, cancel alarm for the specific TimeSlot
+            val alarmCancelled = alarmCoordinator.cancelTimeSlotAlarm(signalItem, timeSlot)
+            
+            // Then update the SignalItem in the database
+            val updatedSignalItem = signalItem.copy(
+                timeSlots = signalItem.timeSlots.filter { it.id != timeSlot.id }
+            )
+            
+            val databaseResult = signalRepository.updateSignalItem(updatedSignalItem)
+            
+            // Return both database update success and alarm cancellation success
+            val combinedResult = databaseResult.map { 
+                Pair(databaseResult.isSuccess, alarmCancelled)
+            }
+            
+            onResult(combinedResult)
+        }
+    }
+
     // Improved import methods with transaction support and conflict resolution
     fun importSignalItemsWithConflictResolution(
         itemsToInsert: List<SignalItem>,
@@ -147,8 +214,13 @@ class WeeklySignalViewModel(
         viewModelScope.launch {
             val result = signalRepository.importSignalItemsWithConflictResolution(itemsToInsert, itemsToUpdate)
             result.onSuccess {
-                // Schedule alarms for all imported SignalItems
-                alarmCoordinator.scheduleSignalItemsAlarms(itemsToInsert + itemsToUpdate)
+                // Schedule alarms for all imported SignalItems - await completion
+                try {
+                    alarmCoordinator.scheduleSignalItemsAlarms(itemsToInsert + itemsToUpdate)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Log alarm scheduling error but don't fail the overall operation
+                }
             }
             onResult(result)
         }
@@ -161,14 +233,19 @@ class WeeklySignalViewModel(
         viewModelScope.launch {
             val result = signalRepository.updateSignalItemsInTransaction(signalItems)
             result.onSuccess {
-                // Update alarms for all modified SignalItems
-                signalItems.forEach { signalItem ->
-                    val oldSignalItem = getSignalItemById(signalItem.id)
-                    if (oldSignalItem != null) {
-                        alarmCoordinator.updateSignalItemAlarms(oldSignalItem, signalItem)
-                    } else {
-                        alarmCoordinator.scheduleSignalItemAlarms(signalItem)
+                // Update alarms for all modified SignalItems - await completion
+                try {
+                    signalItems.forEach { signalItem ->
+                        val oldSignalItem = getSignalItemById(signalItem.id)
+                        if (oldSignalItem != null) {
+                            alarmCoordinator.updateSignalItemAlarms(oldSignalItem, signalItem)
+                        } else {
+                            alarmCoordinator.scheduleSignalItemAlarms(signalItem)
+                        }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Log alarm update error but don't fail the overall operation
                 }
             }
             onResult(result)
