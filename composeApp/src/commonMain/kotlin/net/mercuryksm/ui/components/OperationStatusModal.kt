@@ -253,4 +253,35 @@ object OperationStatusHelper {
             details = listOf(reason)
         )
     }
+    
+    fun signalItemCreateFailed(reason: String): OperationStatus {
+        return OperationStatus.Error(
+            message = "Failed to create signal item",
+            details = listOf(
+                reason,
+                "Device alarm state takes priority over app data."
+            )
+        )
+    }
+    
+    fun signalItemUpdateFailed(reason: String): OperationStatus {
+        return OperationStatus.Error(
+            message = "Failed to update signal item",
+            details = listOf(
+                reason,
+                "Device alarm state takes priority over app data."
+            )
+        )
+    }
+    
+    fun alarmOperationFailed(operation: String, reason: String): OperationStatus {
+        return OperationStatus.Error(
+            message = "Alarm operation failed",
+            details = listOf(
+                "Operation: $operation",
+                "Reason: $reason",
+                "Database was not modified to maintain consistency with device alarms."
+            )
+        )
+    }
 }

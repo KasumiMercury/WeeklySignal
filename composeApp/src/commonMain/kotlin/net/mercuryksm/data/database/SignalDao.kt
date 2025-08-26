@@ -25,6 +25,21 @@ interface SignalDao {
     
     // Transaction methods for batch operations
     @Transaction
+    suspend fun insertSignalWithTimeSlotsAndAlarmStates(
+        signal: SignalEntity,
+        timeSlots: List<TimeSlotEntity>,
+        alarmStates: List<AlarmStateEntity>
+    ) {
+        insert(signal)
+        timeSlots.forEach { timeSlot ->
+            insertTimeSlot(timeSlot)
+        }
+        alarmStates.forEach { alarmState ->
+            insertAlarmState(alarmState)
+        }
+    }
+
+    @Transaction
     suspend fun insertSignalWithTimeSlots(
         signal: SignalEntity,
         timeSlots: List<TimeSlotEntity>
@@ -35,6 +50,23 @@ interface SignalDao {
         }
     }
     
+    @Transaction
+    suspend fun updateSignalWithTimeSlotsAndAlarmStates(
+        signal: SignalEntity,
+        timeSlots: List<TimeSlotEntity>,
+        alarmStates: List<AlarmStateEntity>
+    ) {
+        update(signal)
+        deleteTimeSlotsBySignalId(signal.id)
+        // This will also delete corresponding alarm states due to CASCADE DELETE
+        timeSlots.forEach { timeSlot ->
+            insertTimeSlot(timeSlot)
+        }
+        alarmStates.forEach { alarmState ->
+            insertAlarmState(alarmState)
+        }
+    }
+
     @Transaction
     suspend fun updateSignalWithTimeSlots(
         signal: SignalEntity,
@@ -66,6 +98,24 @@ interface SignalDao {
     }
     
     @Transaction
+    suspend fun updateMultipleSignalsWithTimeSlotsAndAlarmStates(
+        signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>,
+        alarmStates: List<AlarmStateEntity>
+    ) {
+        signalsWithTimeSlots.forEach { (signal, timeSlots) ->
+            update(signal)
+            deleteTimeSlotsBySignalId(signal.id)
+            timeSlots.forEach { timeSlot ->
+                insertTimeSlot(timeSlot)
+            }
+        }
+        // Assuming old alarm states are deleted by CASCADE
+        alarmStates.forEach { alarmState ->
+            insertAlarmState(alarmState)
+        }
+    }
+
+    @Transaction
     suspend fun updateMultipleSignalsWithTimeSlots(
         signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>
     ) {
@@ -78,6 +128,9 @@ interface SignalDao {
         }
     }
     
+    @Insert
+    suspend fun insertAlarmState(alarmState: AlarmStateEntity)
+
     // Helper methods for time slot operations (these will be called from transaction methods)
     @Insert
     suspend fun insertTimeSlot(timeSlot: TimeSlotEntity): Long

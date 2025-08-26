@@ -46,6 +46,36 @@ class DesktopSignalAlarmManager : SignalAlarmManager {
         }
     }
     
+    // Batch SignalItem alarm operations - return NOT_SUPPORTED for desktop
+    override suspend fun scheduleSignalItemAlarms(signalItem: net.mercuryksm.data.SignalItem): List<AlarmSchedulingInfo> {
+        // Desktop doesn't support individual alarms, but we return NOT_SUPPORTED to allow app operations
+        return signalItem.timeSlots.map { 
+            AlarmSchedulingInfo(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        }
+    }
+    
+    override suspend fun cancelSignalItemAlarms(signalItem: net.mercuryksm.data.SignalItem): List<AlarmResult> {
+        // Desktop doesn't support individual alarms, so we return NOT_SUPPORTED
+        return signalItem.timeSlots.map { AlarmResult.NOT_SUPPORTED }
+    }
+    
+        override suspend fun updateSignalItemAlarms(oldSignalItem: net.mercuryksm.data.SignalItem, newSignalItem: net.mercuryksm.data.SignalItem): List<AlarmSchedulingInfo> {
+        // Desktop doesn't support individual alarms, but we return NOT_SUPPORTED to allow app operations
+        return newSignalItem.timeSlots.map { 
+            AlarmSchedulingInfo(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        }
+    }
+    
     override suspend fun hasAlarmPermission(): Boolean {
         // Desktop version always treats permissions as granted for future alarm implementation
         return true

@@ -86,12 +86,17 @@ class AndroidSignalAlarmManager(
         val dayOfWeek: Int
     )
 
-    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult {
+    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmSchedulingInfo {
         return withContext(Dispatchers.IO) {
             try {
                 // Check alarm permissions
                 if (!hasAlarmPermission()) {
-                    return@withContext AlarmResult.PERMISSION_DENIED
+                    return@withContext AlarmSchedulingInfo(
+                        timeSlotId = timeSlot.id,
+                        pendingIntentRequestCode = -1,
+                        nextAlarmTime = -1,
+                        result = AlarmResult.PERMISSION_DENIED
+                    )
                 }
 
                 val alarmId = generateAlarmId(settings.alarmId, timeSlot)
@@ -128,14 +133,26 @@ class AndroidSignalAlarmManager(
                 // Set weekly recurring alarm
                 setRepeatingAlarmWithPermissionCheck(firstAlarmTime, pendingIntent)
                 
-                // Save alarm state to database
-                saveAlarmStateToDatabase(timeSlot.id, alarmInfo.signalItemId, alarmId, firstAlarmTime)
-                
-                AlarmResult.SUCCESS
+                return@withContext AlarmSchedulingInfo(
+                    timeSlotId = timeSlot.id,
+                    pendingIntentRequestCode = alarmId,
+                    nextAlarmTime = firstAlarmTime,
+                    result = AlarmResult.SUCCESS
+                )
             } catch (e: SecurityException) {
-                AlarmResult.PERMISSION_DENIED
+                return@withContext AlarmSchedulingInfo(
+                    timeSlotId = timeSlot.id,
+                    pendingIntentRequestCode = -1,
+                    nextAlarmTime = -1,
+                    result = AlarmResult.PERMISSION_DENIED
+                )
             } catch (e: Exception) {
-                AlarmResult.ERROR
+                return@withContext AlarmSchedulingInfo(
+                    timeSlotId = timeSlot.id,
+                    pendingIntentRequestCode = -1,
+                    nextAlarmTime = -1,
+                    result = AlarmResult.ERROR
+                )
             }
         }
     }
@@ -146,7 +163,7 @@ class AndroidSignalAlarmManager(
                 val alarmIdInt = alarmId.toIntOrNull() ?: return@withContext AlarmResult.ALARM_NOT_FOUND
                 
                 cancelExistingAlarm(alarmIdInt)
-                removeAlarmStateFromDatabase(alarmId)
+                // removeAlarmStateFromDatabase(alarmId)
                 
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
@@ -271,8 +288,8 @@ class AndroidSignalAlarmManager(
     }
 
     // Batch scheduling function for SignalItem
-    override suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {
-        val results = mutableListOf<AlarmResult>()
+    override suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmSchedulingInfo> {
+        val results = mutableListOf<AlarmSchedulingInfo>()
         
         signalItem.timeSlots.forEach { timeSlot ->
             val settings = AlarmSettings(
@@ -306,7 +323,7 @@ class AndroidSignalAlarmManager(
     }
 
     // Process for TimeSlot updates
-    override suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmResult> {
+    override suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmSchedulingInfo> {
         // Cancel all old alarms
         cancelSignalItemAlarms(oldSignalItem)
         

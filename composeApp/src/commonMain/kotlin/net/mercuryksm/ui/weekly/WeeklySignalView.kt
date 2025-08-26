@@ -27,6 +27,7 @@ fun WeeklySignalView(
     val items by viewModel.signalItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val deletionStatus by viewModel.deletionStatus.collectAsState()
+    val operationStatus by viewModel.operationStatus.collectAsState()
     
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
@@ -107,6 +108,12 @@ fun WeeklySignalView(
     OperationStatusModal(
         status = deletionStatus,
         onDismiss = { viewModel.clearDeletionStatus() }
+    )
+    
+    // Operation status modal (for alarm operation failures)
+    OperationStatusModal(
+        status = operationStatus,
+        onDismiss = { viewModel.clearOperationStatus() }
     )
 }
 

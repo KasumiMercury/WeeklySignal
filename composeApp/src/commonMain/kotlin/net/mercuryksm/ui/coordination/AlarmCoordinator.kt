@@ -18,17 +18,21 @@ class AlarmCoordinator(
      * Schedule alarms for a SignalItem
      * Returns true if all alarms were successfully scheduled, false otherwise
      */
-    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): Boolean {
+    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<net.mercuryksm.notification.AlarmSchedulingInfo>? {
         return try {
             alarmManager?.let { manager ->
                 val results = manager.scheduleSignalItemAlarms(signalItem)
-                // Check if all alarm scheduling operations were successful
-                results.all { it == net.mercuryksm.notification.AlarmResult.SUCCESS }
-            } ?: true // Return true if no alarm manager (e.g., on desktop)
+                // Check if all alarm scheduling operations were successful or not supported (desktop)
+                if (results.all { it.result == net.mercuryksm.notification.AlarmResult.SUCCESS || it.result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED }) {
+                    results
+                } else {
+                    null
+                }
+            } // Return null if no alarm manager (e.g., on desktop), though the logic above handles it
         } catch (e: Exception) {
             // Log alarm scheduling error
             e.printStackTrace()
-            false
+            null
         }
     }
     
@@ -40,8 +44,11 @@ class AlarmCoordinator(
         return try {
             alarmManager?.let { manager ->
                 val results = manager.cancelSignalItemAlarms(signalItem)
-                // Check if all alarm cancellations were successful
-                results.all { it == net.mercuryksm.notification.AlarmResult.SUCCESS }
+                // Check if all alarm cancellations were successful or not supported (desktop)
+                results.all { result ->
+                    result == net.mercuryksm.notification.AlarmResult.SUCCESS ||
+                    result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED
+                }
             } ?: true // Return true if no alarm manager (e.g., on desktop)
         } catch (e: Exception) {
             // Log alarm cancellation error
@@ -54,17 +61,20 @@ class AlarmCoordinator(
      * Update alarms when a SignalItem is modified
      * Returns true if all alarms were successfully updated, false otherwise
      */
-    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): Boolean {
+    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<net.mercuryksm.notification.AlarmSchedulingInfo>? {
         return try {
             alarmManager?.let { manager ->
                 val results = manager.updateSignalItemAlarms(oldSignalItem, newSignalItem)
-                // Check if all alarm update operations were successful
-                results.all { it == net.mercuryksm.notification.AlarmResult.SUCCESS }
-            } ?: true // Return true if no alarm manager (e.g., on desktop)
+                if (results.all { it.result == net.mercuryksm.notification.AlarmResult.SUCCESS || it.result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED }) {
+                    results
+                } else {
+                    null
+                }
+            }
         } catch (e: Exception) {
             // Log alarm update error
             e.printStackTrace()
-            false
+            null
         }
     }
     
@@ -76,8 +86,8 @@ class AlarmCoordinator(
         return try {
             var allSuccessful = true
             signalItems.forEach { signalItem ->
-                val success = scheduleSignalItemAlarms(signalItem)
-                if (!success) allSuccessful = false
+                val results = scheduleSignalItemAlarms(signalItem)
+                if (results == null) allSuccessful = false
             }
             allSuccessful
         } catch (e: Exception) {
@@ -113,8 +123,11 @@ class AlarmCoordinator(
                 // Create a temporary SignalItem with only the specific TimeSlot
                 val tempSignalItem = signalItem.copy(timeSlots = listOf(timeSlot))
                 val results = manager.cancelSignalItemAlarms(tempSignalItem)
-                // Check if the alarm cancellation was successful
-                results.all { it == net.mercuryksm.notification.AlarmResult.SUCCESS }
+                // Check if the alarm cancellation was successful or not supported (desktop)
+                results.all { result ->
+                    result == net.mercuryksm.notification.AlarmResult.SUCCESS ||
+                    result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED
+                }
             } ?: true // Return true if no alarm manager (e.g., on desktop)
         } catch (e: Exception) {
             e.printStackTrace()

@@ -80,32 +80,7 @@ fun TimeSlotEditor(
                             showTimeSlotDialog = true
                         },
                         onDelete = {
-                            if (viewModel != null && signalItem != null) {
-                                // Use ViewModel to delete TimeSlot with alarm management
-                                operationStatus = OperationStatusHelper.loading()
-                                
-                                viewModel.removeTimeSlotFromSignalItem(signalItem, timeSlot) { result ->
-                                    result.onSuccess { (databaseUpdated, alarmCancelled) ->
-                                        operationStatus = OperationStatusHelper.timeSlotDeletedSuccessfully(alarmCancelled)
-                                        
-                                        // Update local state and close modal after delay
-                                        onTimeSlotsChanged(timeSlots.filter { it.id != timeSlot.id })
-                                        
-                                        // Auto-dismiss success modal after 1.5 seconds
-                                        CoroutineScope(Dispatchers.Main).launch {
-                                            delay(1500)
-                                            operationStatus = null
-                                        }
-                                    }.onFailure { exception ->
-                                        operationStatus = OperationStatusHelper.timeSlotDeleteFailed(
-                                            exception.message ?: "Unknown error occurred"
-                                        )
-                                    }
-                                }
-                            } else {
-                                // Fallback to simple removal (without alarm management)
-                                onTimeSlotsChanged(timeSlots.filter { it.id != timeSlot.id })
-                            }
+                            onTimeSlotsChanged(timeSlots.filter { it.id != timeSlot.id })
                         }
                     )
                 }
