@@ -23,12 +23,12 @@ class SignalRepository(
         loadFromDatabase()
     }
     
-    suspend fun addSignalItem(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    suspend fun addSignalItem(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return try {
             _isLoading.value = true
             
             val result = if (databaseService != null) {
-                databaseService.saveSignalItemWithAlarmStates(signalItem, schedulingResults)
+                databaseService.saveSignalItemWithAlarms(signalItem, schedulingResults)
             } else {
                 Result.success(Unit)
             }
@@ -45,12 +45,12 @@ class SignalRepository(
         }
     }
     
-    suspend fun updateSignalItem(updatedItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    suspend fun updateSignalItem(updatedItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return try {
             _isLoading.value = true
             
             val result = if (databaseService != null) {
-                databaseService.updateSignalItemWithAlarmStates(updatedItem, schedulingResults)
+                databaseService.updateSignalItemWithAlarms(updatedItem, schedulingResults)
             } else {
                 Result.success(Unit)
             }
@@ -153,12 +153,12 @@ class SignalRepository(
         }
     }
     
-    suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return try {
             _isLoading.value = true
             
             val result = if (databaseService != null) {
-                databaseService.updateSignalItemsWithAlarmStates(signalItems, schedulingResults)
+                databaseService.updateSignalItemsWithAlarms(signalItems, schedulingResults)
             } else {
                 Result.success(Unit)
             }

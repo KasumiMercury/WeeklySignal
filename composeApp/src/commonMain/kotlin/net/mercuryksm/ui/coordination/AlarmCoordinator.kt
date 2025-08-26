@@ -3,6 +3,9 @@ package net.mercuryksm.ui.coordination
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.notification.AlarmOperationResult
+import net.mercuryksm.notification.AlarmResult
 import net.mercuryksm.notification.SignalAlarmManager
 
 /**
@@ -11,19 +14,18 @@ import net.mercuryksm.notification.SignalAlarmManager
  */
 class AlarmCoordinator(
     private val alarmManager: SignalAlarmManager?,
-    private val coroutineScope: CoroutineScope
 ) {
     
     /**
      * Schedule alarms for a SignalItem
      * Returns true if all alarms were successfully scheduled, false otherwise
      */
-    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<net.mercuryksm.notification.AlarmSchedulingInfo>? {
+    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmOperationResult>? {
         return try {
             alarmManager?.let { manager ->
                 val results = manager.scheduleSignalItemAlarms(signalItem)
                 // Check if all alarm scheduling operations were successful or not supported (desktop)
-                if (results.all { it.result == net.mercuryksm.notification.AlarmResult.SUCCESS || it.result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED }) {
+                if (results.all { it.result == AlarmResult.SUCCESS || it.result == AlarmResult.NOT_SUPPORTED }) {
                     results
                 } else {
                     null
@@ -46,8 +48,8 @@ class AlarmCoordinator(
                 val results = manager.cancelSignalItemAlarms(signalItem)
                 // Check if all alarm cancellations were successful or not supported (desktop)
                 results.all { result ->
-                    result == net.mercuryksm.notification.AlarmResult.SUCCESS ||
-                    result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED
+                    result == AlarmResult.SUCCESS ||
+                    result == AlarmResult.NOT_SUPPORTED
                 }
             } ?: true // Return true if no alarm manager (e.g., on desktop)
         } catch (e: Exception) {
@@ -61,11 +63,11 @@ class AlarmCoordinator(
      * Update alarms when a SignalItem is modified
      * Returns true if all alarms were successfully updated, false otherwise
      */
-    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<net.mercuryksm.notification.AlarmSchedulingInfo>? {
+    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmOperationResult>? {
         return try {
             alarmManager?.let { manager ->
                 val results = manager.updateSignalItemAlarms(oldSignalItem, newSignalItem)
-                if (results.all { it.result == net.mercuryksm.notification.AlarmResult.SUCCESS || it.result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED }) {
+                if (results.all { it.result == AlarmResult.SUCCESS || it.result == AlarmResult.NOT_SUPPORTED }) {
                     results
                 } else {
                     null
@@ -117,7 +119,7 @@ class AlarmCoordinator(
     /**
      * Cancel alarm for a specific TimeSlot within a SignalItem
      */
-    suspend fun cancelTimeSlotAlarm(signalItem: SignalItem, timeSlot: net.mercuryksm.data.TimeSlot): Boolean {
+    suspend fun cancelTimeSlotAlarm(signalItem: SignalItem, timeSlot: TimeSlot): Boolean {
         return try {
             alarmManager?.let { manager ->
                 // Create a temporary SignalItem with only the specific TimeSlot
@@ -125,8 +127,8 @@ class AlarmCoordinator(
                 val results = manager.cancelSignalItemAlarms(tempSignalItem)
                 // Check if the alarm cancellation was successful or not supported (desktop)
                 results.all { result ->
-                    result == net.mercuryksm.notification.AlarmResult.SUCCESS ||
-                    result == net.mercuryksm.notification.AlarmResult.NOT_SUPPORTED
+                    result == AlarmResult.SUCCESS ||
+                    result == AlarmResult.NOT_SUPPORTED
                 }
             } ?: true // Return true if no alarm manager (e.g., on desktop)
         } catch (e: Exception) {

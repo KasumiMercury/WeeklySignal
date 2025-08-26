@@ -28,7 +28,7 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         }
     }
     
-    override suspend fun saveSignalItemWithAlarmStates(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    override suspend fun saveSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
@@ -49,33 +49,12 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
                     null
                 }
             }
-            signalDao.insertSignalWithTimeSlotsAndAlarmStates(signalEntity, timeSlotEntities, alarmStateEntities)
+            signalDao.insertSignalWithWithAlarms(signalEntity, timeSlotEntities, alarmStateEntities)
         }
     }
 
-    override suspend fun saveSignalItem(signalItem: SignalItem): Result<Unit> {
-        return executeWithResult {
-            val signalDao = databaseRepository.getSignalDao()
-            val signalEntity = signalItem.toSignalEntity()
-            val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
-                timeSlot.toTimeSlotEntity(signalItem.id)
-            }
-            signalDao.insertSignalWithTimeSlots(signalEntity, timeSlotEntities)
-        }
-    }
-    
-    override suspend fun updateSignalItem(signalItem: SignalItem): Result<Unit> {
-        return executeWithResult {
-            val signalDao = databaseRepository.getSignalDao()
-            val signalEntity = signalItem.toSignalEntity()
-            val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
-                timeSlot.toTimeSlotEntity(signalItem.id)
-            }
-            signalDao.updateSignalWithTimeSlots(signalEntity, timeSlotEntities)
-        }
-    }
 
-    override suspend fun updateSignalItemWithAlarmStates(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    override suspend fun updateSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
@@ -96,7 +75,7 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
                     null
                 }
             }
-            signalDao.updateSignalWithTimeSlotsAndAlarmStates(signalEntity, timeSlotEntities, alarmStateEntities)
+            signalDao.updateSignalWithWithAlarms(signalEntity, timeSlotEntities, alarmStateEntities)
         }
     }
     
@@ -214,21 +193,8 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         }
     }
     
-    override suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
-        return executeWithResult {
-            val signalDao = databaseRepository.getSignalDao()
-            val signalsWithTimeSlots = signalItems.map { signalItem ->
-                val signalEntity = signalItem.toSignalEntity()
-                val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
-                    timeSlot.toTimeSlotEntity(signalItem.id)
-                }
-                Pair(signalEntity, timeSlotEntities)
-            }
-            signalDao.updateMultipleSignalsWithTimeSlots(signalsWithTimeSlots)
-        }
-    }
 
-    override suspend fun updateSignalItemsWithAlarmStates(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit> {
+    override suspend fun updateSignalItemsWithAlarms(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalsWithTimeSlots = signalItems.map { signalItem ->
@@ -252,7 +218,7 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
                     null
                 }
             }
-            signalDao.updateMultipleSignalsWithTimeSlotsAndAlarmStates(signalsWithTimeSlots, alarmStateEntities)
+            signalDao.updateMultipleSignalsWithWithAlarms(signalsWithTimeSlots, alarmStateEntities)
         }
     }
     

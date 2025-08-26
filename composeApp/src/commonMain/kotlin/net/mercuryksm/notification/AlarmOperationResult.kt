@@ -1,9 +1,9 @@
 package net.mercuryksm.notification
 
 /**
- * Data class to hold the result of an alarm scheduling operation.
+ * Data class to hold the result of an alarm operation (scheduling, cancellation, etc.).
  */
-data class AlarmSchedulingInfo(
+data class AlarmOperationResult(
     val timeSlotId: String,
     val pendingIntentRequestCode: Int,
     val nextAlarmTime: Long,

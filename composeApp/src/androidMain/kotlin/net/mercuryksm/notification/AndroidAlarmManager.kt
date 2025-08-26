@@ -86,12 +86,12 @@ class AndroidSignalAlarmManager(
         val dayOfWeek: Int
     )
 
-    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmSchedulingInfo {
+    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmOperationResult {
         return withContext(Dispatchers.IO) {
             try {
                 // Check alarm permissions
                 if (!hasAlarmPermission()) {
-                    return@withContext AlarmSchedulingInfo(
+                    return@withContext AlarmOperationResult(
                         timeSlotId = timeSlot.id,
                         pendingIntentRequestCode = -1,
                         nextAlarmTime = -1,
@@ -133,21 +133,21 @@ class AndroidSignalAlarmManager(
                 // Set weekly recurring alarm
                 setRepeatingAlarmWithPermissionCheck(firstAlarmTime, pendingIntent)
                 
-                return@withContext AlarmSchedulingInfo(
+                return@withContext AlarmOperationResult(
                     timeSlotId = timeSlot.id,
                     pendingIntentRequestCode = alarmId,
                     nextAlarmTime = firstAlarmTime,
                     result = AlarmResult.SUCCESS
                 )
             } catch (e: SecurityException) {
-                return@withContext AlarmSchedulingInfo(
+                return@withContext AlarmOperationResult(
                     timeSlotId = timeSlot.id,
                     pendingIntentRequestCode = -1,
                     nextAlarmTime = -1,
                     result = AlarmResult.PERMISSION_DENIED
                 )
             } catch (e: Exception) {
-                return@withContext AlarmSchedulingInfo(
+                return@withContext AlarmOperationResult(
                     timeSlotId = timeSlot.id,
                     pendingIntentRequestCode = -1,
                     nextAlarmTime = -1,
@@ -163,7 +163,6 @@ class AndroidSignalAlarmManager(
                 val alarmIdInt = alarmId.toIntOrNull() ?: return@withContext AlarmResult.ALARM_NOT_FOUND
                 
                 cancelExistingAlarm(alarmIdInt)
-                // removeAlarmStateFromDatabase(alarmId)
                 
                 AlarmResult.SUCCESS
             } catch (e: Exception) {
@@ -288,8 +287,8 @@ class AndroidSignalAlarmManager(
     }
 
     // Batch scheduling function for SignalItem
-    override suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmSchedulingInfo> {
-        val results = mutableListOf<AlarmSchedulingInfo>()
+    override suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmOperationResult> {
+        val results = mutableListOf<AlarmOperationResult>()
         
         signalItem.timeSlots.forEach { timeSlot ->
             val settings = AlarmSettings(
@@ -323,7 +322,7 @@ class AndroidSignalAlarmManager(
     }
 
     // Process for TimeSlot updates
-    override suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmSchedulingInfo> {
+    override suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmOperationResult> {
         // Cancel all old alarms
         cancelSignalItemAlarms(oldSignalItem)
         
@@ -435,37 +434,6 @@ class AndroidSignalAlarmManager(
         }
     }
 
-    // Database alarm state management
-
-    private suspend fun saveAlarmStateToDatabase(timeSlotId: String, signalItemId: String, alarmId: Int, nextAlarmTime: Long) {
-        val alarmState = AlarmStateEntity(
-            timeSlotId = timeSlotId,
-            signalItemId = signalItemId,
-            isAlarmScheduled = true,
-            pendingIntentRequestCode = alarmId,
-            scheduledAt = System.currentTimeMillis(),
-            nextAlarmTime = nextAlarmTime
-        )
-        val database = getRoomDatabase()
-        database.alarmStateDao().insertOrUpdate(alarmState)
-    }
-
-    private suspend fun removeAlarmStateFromDatabase(alarmId: String) {
-        // Find alarm state by pending intent request code or timeSlotId
-        val alarmIdInt = alarmId.toIntOrNull()
-        if (alarmIdInt != null) {
-            val database = getRoomDatabase()
-            val allStates = database.alarmStateDao().getAll()
-            val targetState = allStates.find { it.pendingIntentRequestCode == alarmIdInt }
-            targetState?.let { state ->
-                database.alarmStateDao().delete(state.timeSlotId)
-            }
-        } else {
-            // Try to delete by timeSlotId directly
-            val database = getRoomDatabase()
-            database.alarmStateDao().delete(alarmId)
-        }
-    }
 
     private suspend fun clearAllAlarmStates() {
         val database = getRoomDatabase()

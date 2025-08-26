@@ -3,10 +3,8 @@ package net.mercuryksm.data.database
 import net.mercuryksm.data.SignalItem
 
 interface SignalDatabaseService {
-    suspend fun saveSignalItemWithAlarmStates(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit>
-    suspend fun saveSignalItem(signalItem: SignalItem): Result<Unit>
-    suspend fun updateSignalItem(signalItem: SignalItem): Result<Unit>
-    suspend fun updateSignalItemWithAlarmStates(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit>
+    suspend fun saveSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit>
+    suspend fun updateSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit>
     suspend fun deleteSignalItem(signalId: String): Result<Unit>
     suspend fun getSignalItemById(signalId: String): Result<SignalItem?>
     suspend fun getAllSignalItems(): Result<List<SignalItem>>
@@ -15,8 +13,7 @@ interface SignalDatabaseService {
     
     // Batch operations with transaction support
     suspend fun saveSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
-    suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit>
-    suspend fun updateSignalItemsWithAlarmStates(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmSchedulingInfo>): Result<Unit>
+    suspend fun updateSignalItemsWithAlarms(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit>
     suspend fun deleteSignalItemsInTransaction(signalIds: List<String>): Result<Unit>
     suspend fun importSignalItemsWithConflictResolution(
         itemsToInsert: List<SignalItem>,

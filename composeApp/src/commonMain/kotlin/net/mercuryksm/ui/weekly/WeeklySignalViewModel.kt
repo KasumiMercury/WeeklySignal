@@ -26,7 +26,7 @@ class WeeklySignalViewModel(
     
     // Coordinators for specialized responsibilities
     private val importExportCoordinator = ImportExportCoordinator()
-    private val alarmCoordinator = AlarmCoordinator(alarmManager, viewModelScope)
+    private val alarmCoordinator = AlarmCoordinator(alarmManager)
     
     // Deletion status for WeeklySignalView modal display
     private val _deletionStatus = MutableStateFlow<OperationStatus?>(null)
@@ -314,7 +314,7 @@ class WeeklySignalViewModel(
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val allSchedulingResults = mutableListOf<net.mercuryksm.notification.AlarmSchedulingInfo>()
+            val allSchedulingResults = mutableListOf<net.mercuryksm.notification.AlarmOperationResult>()
             var allAlarmsSuccess = true
 
             // First, update alarms for all SignalItems (device OS state priority)

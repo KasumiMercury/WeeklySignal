@@ -25,7 +25,7 @@ interface SignalDao {
     
     // Transaction methods for batch operations
     @Transaction
-    suspend fun insertSignalWithTimeSlotsAndAlarmStates(
+    suspend fun insertSignalWithWithAlarms(
         signal: SignalEntity,
         timeSlots: List<TimeSlotEntity>,
         alarmStates: List<AlarmStateEntity>
@@ -51,7 +51,7 @@ interface SignalDao {
     }
     
     @Transaction
-    suspend fun updateSignalWithTimeSlotsAndAlarmStates(
+    suspend fun updateSignalWithWithAlarms(
         signal: SignalEntity,
         timeSlots: List<TimeSlotEntity>,
         alarmStates: List<AlarmStateEntity>
@@ -98,7 +98,7 @@ interface SignalDao {
     }
     
     @Transaction
-    suspend fun updateMultipleSignalsWithTimeSlotsAndAlarmStates(
+    suspend fun updateMultipleSignalsWithWithAlarms(
         signalsWithTimeSlots: List<Pair<SignalEntity, List<TimeSlotEntity>>>,
         alarmStates: List<AlarmStateEntity>
     ) {

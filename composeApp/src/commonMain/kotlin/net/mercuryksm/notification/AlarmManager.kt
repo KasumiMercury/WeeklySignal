@@ -7,7 +7,7 @@ interface SignalAlarmManager {
     /**
      * Schedules an alarm for the specified time slot
      */
-    suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmSchedulingInfo
+    suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmOperationResult
     
     /**
      * Cancels a specific alarm
@@ -54,9 +54,9 @@ interface SignalAlarmManager {
     /**
      * Schedules alarms for all time slots in a SignalItem
      */
-    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmSchedulingInfo> {
+    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmOperationResult> {
         return signalItem.timeSlots.map { 
-            AlarmSchedulingInfo(
+            AlarmOperationResult(
                 timeSlotId = it.id,
                 pendingIntentRequestCode = -1,
                 nextAlarmTime = -1,
@@ -75,9 +75,9 @@ interface SignalAlarmManager {
     /**
      * Updates alarms when a SignalItem is modified
      */
-    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmSchedulingInfo> {
+    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmOperationResult> {
         return newSignalItem.timeSlots.map { 
-            AlarmSchedulingInfo(
+            AlarmOperationResult(
                 timeSlotId = it.id,
                 pendingIntentRequestCode = -1,
                 nextAlarmTime = -1,
