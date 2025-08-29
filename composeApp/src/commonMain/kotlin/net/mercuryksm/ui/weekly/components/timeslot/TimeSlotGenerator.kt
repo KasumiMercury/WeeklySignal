@@ -30,7 +30,9 @@ fun generateTimeSlotItems(allItems: List<SignalItem>): List<TimeSlotItem> {
                     UITimeSlot(hour, minute, true)
                 )
             )
-            currentTime += WeeklyGridConstants.TIME_INTERVAL_MINUTES
+            // Move to next item time directly instead of fixed 15-minute intervals
+            val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
+            currentTime = nextItemTime ?: (currentTime + WeeklyGridConstants.TIME_INTERVAL_MINUTES)
         } else {
             // Add memory marks for empty intervals
             val nextItemTime = itemTimes.filter { it > currentTime }.minOrNull()
