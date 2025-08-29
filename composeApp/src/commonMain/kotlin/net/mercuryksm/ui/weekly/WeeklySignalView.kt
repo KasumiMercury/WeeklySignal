@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.ui.components.OperationStatusModal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +26,8 @@ fun WeeklySignalView(
 ) {
     val items by viewModel.signalItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val deletionStatus by viewModel.deletionStatus.collectAsState()
+    val operationStatus by viewModel.operationStatus.collectAsState()
     
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
@@ -100,6 +103,18 @@ fun WeeklySignalView(
             }
         )
     }
+    
+    // Deletion status modal
+    OperationStatusModal(
+        status = deletionStatus,
+        onDismiss = { viewModel.clearDeletionStatus() }
+    )
+    
+    // Operation status modal (for alarm operation failures)
+    OperationStatusModal(
+        status = operationStatus,
+        onDismiss = { viewModel.clearOperationStatus() }
+    )
 }
 
 

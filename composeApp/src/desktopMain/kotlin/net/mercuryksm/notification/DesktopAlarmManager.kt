@@ -14,9 +14,14 @@ class DesktopSignalAlarmManager : SignalAlarmManager {
         initSystemTray()
     }
     
-    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult {
+    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmOperationResult {
         // Desktop version does not support scheduling functionality
-        return AlarmResult.NOT_SUPPORTED
+        return AlarmOperationResult(
+            timeSlotId = timeSlot.id,
+            pendingIntentRequestCode = -1,
+            nextAlarmTime = -1,
+            result = AlarmResult.NOT_SUPPORTED
+        )
     }
     
     override suspend fun cancelAlarm(alarmId: String): AlarmResult {
@@ -43,6 +48,36 @@ class DesktopSignalAlarmManager : SignalAlarmManager {
             AlarmResult.SUCCESS
         } catch (e: Exception) {
             AlarmResult.ERROR
+        }
+    }
+    
+    // Batch SignalItem alarm operations - return NOT_SUPPORTED for desktop
+    override suspend fun scheduleSignalItemAlarms(signalItem: net.mercuryksm.data.SignalItem): List<AlarmOperationResult> {
+        // Desktop doesn't support individual alarms, but we return NOT_SUPPORTED to allow app operations
+        return signalItem.timeSlots.map { 
+            AlarmOperationResult(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        }
+    }
+    
+    override suspend fun cancelSignalItemAlarms(signalItem: net.mercuryksm.data.SignalItem): List<AlarmResult> {
+        // Desktop doesn't support individual alarms, so we return NOT_SUPPORTED
+        return signalItem.timeSlots.map { AlarmResult.NOT_SUPPORTED }
+    }
+    
+        override suspend fun updateSignalItemAlarms(oldSignalItem: net.mercuryksm.data.SignalItem, newSignalItem: net.mercuryksm.data.SignalItem): List<AlarmOperationResult> {
+        // Desktop doesn't support individual alarms, but we return NOT_SUPPORTED to allow app operations
+        return newSignalItem.timeSlots.map { 
+            AlarmOperationResult(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
         }
     }
     

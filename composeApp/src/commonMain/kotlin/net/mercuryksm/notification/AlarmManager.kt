@@ -7,7 +7,7 @@ interface SignalAlarmManager {
     /**
      * Schedules an alarm for the specified time slot
      */
-    suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmResult
+    suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings): AlarmOperationResult
     
     /**
      * Cancels a specific alarm
@@ -54,22 +54,36 @@ interface SignalAlarmManager {
     /**
      * Schedules alarms for all time slots in a SignalItem
      */
-    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {
-        return emptyList() // Default implementation - platform specific overrides will provide actual functionality
+    suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmOperationResult> {
+        return signalItem.timeSlots.map { 
+            AlarmOperationResult(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        } // Default implementation - platform specific overrides will provide actual functionality
     }
     
     /**
      * Cancels all alarms for a SignalItem
      */
     suspend fun cancelSignalItemAlarms(signalItem: SignalItem): List<AlarmResult> {
-        return emptyList() // Default implementation
+        return signalItem.timeSlots.map { AlarmResult.NOT_SUPPORTED } // Default implementation
     }
     
     /**
      * Updates alarms when a SignalItem is modified
      */
-    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmResult> {
-        return emptyList() // Default implementation
+    suspend fun updateSignalItemAlarms(oldSignalItem: SignalItem, newSignalItem: SignalItem): List<AlarmOperationResult> {
+        return newSignalItem.timeSlots.map { 
+            AlarmOperationResult(
+                timeSlotId = it.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        } // Default implementation
     }
     
     /**

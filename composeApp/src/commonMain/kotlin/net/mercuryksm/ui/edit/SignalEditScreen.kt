@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,7 @@ import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createTestAlarmSettings
 import net.mercuryksm.notification.rememberPermissionHelper
 import net.mercuryksm.ui.components.ColorPicker
+import net.mercuryksm.ui.components.OperationStatusHelper
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,9 +34,22 @@ fun SignalEditScreen(
     modifier: Modifier = Modifier,
     alarmManager: SignalAlarmManager? = null
 ) {
-    val originalSignalItem = viewModel.getSignalItemById(signalId)
+    var isDeletingInDialog by remember { mutableStateOf(false) }
+    
+    val currentSignalItem = viewModel.getSignalItemById(signalId)
+    
+    // Keep reference to original item even during deletion process
+    val originalSignalItem = remember { currentSignalItem }
 
     if (originalSignalItem == null) {
+        LaunchedEffect(Unit) {
+            onNavigateBack()
+        }
+        return
+    }
+    
+    // If item is deleted from repository but we're in deletion process, continue showing the modal
+    if (currentSignalItem == null && !isDeletingInDialog) {
         LaunchedEffect(Unit) {
             onNavigateBack()
         }
@@ -277,20 +292,34 @@ fun SignalEditScreen(
 
     fun deleteSignalItem() {
         try {
+            isDeletingInDialog = true
+            
             viewModel.removeSignalItem(originalSignalItem) { result ->
-                result.onSuccess {
-                    coroutineScope.launch {
-                        kotlinx.coroutines.delay(50)
-                        onNavigateBack()
-                    }
+                result.onSuccess { (databaseDeleted, alarmsDeleted) ->
+                    // Set deletion status in ViewModel for WeeklySignalView to display
+                    viewModel.setDeletionStatus(
+                        OperationStatusHelper.signalItemDeletedSuccessfully(alarmsDeleted)
+                    )
+                    // Navigate back immediately
+                    onNavigateBack()
                 }.onFailure { exception ->
-                    errorMessage = exception.message ?: "Failed to delete signal"
-                    showErrorDialog = true
+                    // Set failure status in ViewModel
+                    viewModel.setDeletionStatus(
+                        OperationStatusHelper.signalItemDeleteFailed(
+                            exception.message ?: "Unknown error occurred"
+                        )
+                    )
+                    // Navigate back immediately
+                    onNavigateBack()
                 }
             }
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Failed to delete signal"
-            showErrorDialog = true
+            viewModel.setDeletionStatus(
+                OperationStatusHelper.signalItemDeleteFailed(
+                    e.message ?: "Unknown error occurred"
+                )
+            )
+            onNavigateBack()
         }
     }
 
@@ -360,7 +389,9 @@ fun SignalEditScreen(
                 timeSlots = timeSlots,
                 onTimeSlotsChange = { timeSlots = it },
                 color = color,
-                onColorChange = { color = it }
+                onColorChange = { color = it },
+                viewModel = viewModel,
+                signalId = signalId
             )
             
             // Delete Button
@@ -401,29 +432,56 @@ fun SignalEditScreen(
             }
         }
     )
+    
 
     // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Signal") },
-            text = { Text("Are you sure you want to delete this signal? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        deleteSignalItem()
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+            onDismissRequest = { 
+                if (!isDeletingInDialog) {
+                    showDeleteDialog = false 
+                }
+            },
+            title = { 
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Delete")
+                    if (isDeletingInDialog) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    Text(if (isDeletingInDialog) "Deleting Signal..." else "Delete Signal")
+                }
+            },
+            text = { 
+                Text(
+                    if (isDeletingInDialog) {
+                        "Please wait while the signal and its alarms are being removed..."
+                    } else {
+                        "Are you sure you want to delete this signal? This action cannot be undone."
+                    }
+                ) 
+            },
+            confirmButton = {
+                if (!isDeletingInDialog) {
+                    TextButton(
+                        onClick = { deleteSignalItem() },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                if (!isDeletingInDialog) {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
                 }
             }
         )
@@ -459,7 +517,9 @@ private fun SignalEditForm(
     onTimeSlotsChange: (List<TimeSlot>) -> Unit,
     color: Long,
     onColorChange: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: WeeklySignalViewModel,
+    signalId: String
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -483,7 +543,17 @@ private fun SignalEditForm(
         // Time Slots Editor
         TimeSlotEditor(
             timeSlots = timeSlots,
-            onTimeSlotsChanged = onTimeSlotsChange
+            onTimeSlotsChanged = onTimeSlotsChange,
+            viewModel = viewModel,
+            signalItem = SignalItem(
+                id = signalId,
+                name = name,
+                timeSlots = timeSlots,
+                description = description,
+                sound = sound,
+                vibration = vibration,
+                color = color
+            )
         )
 
         // Description

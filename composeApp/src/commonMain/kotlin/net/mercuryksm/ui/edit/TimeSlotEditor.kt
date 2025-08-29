@@ -11,7 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
+import net.mercuryksm.ui.components.OperationStatus
+import net.mercuryksm.ui.components.OperationStatusHelper
+import net.mercuryksm.ui.components.OperationStatusModal
+import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,10 +28,13 @@ import java.util.*
 fun TimeSlotEditor(
     timeSlots: List<TimeSlot>,
     onTimeSlotsChanged: (List<TimeSlot>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: WeeklySignalViewModel? = null,
+    signalItem: SignalItem? = null
 ) {
     var showTimeSlotDialog by remember { mutableStateOf(false) }
     var editingTimeSlot by remember { mutableStateOf<TimeSlot?>(null) }
+    var operationStatus by remember { mutableStateOf<OperationStatus?>(null) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -121,6 +133,12 @@ fun TimeSlotEditor(
             }
         )
     }
+    
+    // Operation Status Modal
+    OperationStatusModal(
+        status = operationStatus,
+        onDismiss = { operationStatus = null }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

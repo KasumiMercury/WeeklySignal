@@ -28,25 +28,54 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         }
     }
     
-    override suspend fun saveSignalItem(signalItem: SignalItem): Result<Unit> {
+    override suspend fun saveSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
             val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
                 timeSlot.toTimeSlotEntity(signalItem.id)
             }
-            signalDao.insertSignalWithTimeSlots(signalEntity, timeSlotEntities)
+            val alarmStateEntities = schedulingResults.mapNotNull { info ->
+                if (info.result == net.mercuryksm.notification.AlarmResult.SUCCESS) {
+                    AlarmStateEntity(
+                        timeSlotId = info.timeSlotId,
+                        signalItemId = signalItem.id,
+                        isAlarmScheduled = true,
+                        pendingIntentRequestCode = info.pendingIntentRequestCode,
+                        scheduledAt = System.currentTimeMillis(),
+                        nextAlarmTime = info.nextAlarmTime
+                    )
+                } else {
+                    null
+                }
+            }
+            signalDao.insertSignalWithWithAlarms(signalEntity, timeSlotEntities, alarmStateEntities)
         }
     }
-    
-    override suspend fun updateSignalItem(signalItem: SignalItem): Result<Unit> {
+
+
+    override suspend fun updateSignalItemWithAlarms(signalItem: SignalItem, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalEntity = signalItem.toSignalEntity()
             val timeSlotEntities = signalItem.timeSlots.map { timeSlot ->
                 timeSlot.toTimeSlotEntity(signalItem.id)
             }
-            signalDao.updateSignalWithTimeSlots(signalEntity, timeSlotEntities)
+            val alarmStateEntities = schedulingResults.mapNotNull { info ->
+                if (info.result == net.mercuryksm.notification.AlarmResult.SUCCESS) {
+                    AlarmStateEntity(
+                        timeSlotId = info.timeSlotId,
+                        signalItemId = signalItem.id,
+                        isAlarmScheduled = true,
+                        pendingIntentRequestCode = info.pendingIntentRequestCode,
+                        scheduledAt = System.currentTimeMillis(),
+                        nextAlarmTime = info.nextAlarmTime
+                    )
+                } else {
+                    null
+                }
+            }
+            signalDao.updateSignalWithWithAlarms(signalEntity, timeSlotEntities, alarmStateEntities)
         }
     }
     
@@ -164,7 +193,8 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
         }
     }
     
-    override suspend fun updateSignalItemsInTransaction(signalItems: List<SignalItem>): Result<Unit> {
+
+    override suspend fun updateSignalItemsWithAlarms(signalItems: List<SignalItem>, schedulingResults: List<net.mercuryksm.notification.AlarmOperationResult>): Result<Unit> {
         return executeWithResult {
             val signalDao = databaseRepository.getSignalDao()
             val signalsWithTimeSlots = signalItems.map { signalItem ->
@@ -174,7 +204,21 @@ abstract class BaseSignalDatabaseService : SignalDatabaseService {
                 }
                 Pair(signalEntity, timeSlotEntities)
             }
-            signalDao.updateMultipleSignalsWithTimeSlots(signalsWithTimeSlots)
+            val alarmStateEntities = schedulingResults.mapNotNull { info ->
+                if (info.result == net.mercuryksm.notification.AlarmResult.SUCCESS) {
+                    AlarmStateEntity(
+                        timeSlotId = info.timeSlotId,
+                        signalItemId = signalItems.find { it.timeSlots.any { ts -> ts.id == info.timeSlotId } }?.id ?: "",
+                        isAlarmScheduled = true,
+                        pendingIntentRequestCode = info.pendingIntentRequestCode,
+                        scheduledAt = System.currentTimeMillis(),
+                        nextAlarmTime = info.nextAlarmTime
+                    )
+                } else {
+                    null
+                }
+            }
+            signalDao.updateMultipleSignalsWithWithAlarms(signalsWithTimeSlots, alarmStateEntities)
         }
     }
     
