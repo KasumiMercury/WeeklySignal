@@ -9,8 +9,8 @@ import net.mercuryksm.data.database.SignalDatabaseService
 import net.mercuryksm.navigation.NavGraph
 import net.mercuryksm.notification.SignalAlarmManager
 import net.mercuryksm.notification.createAlarmServiceFactory
-import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 import net.mercuryksm.ui.startup.StartupPermissionCheck
+import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable

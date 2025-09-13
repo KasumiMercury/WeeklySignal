@@ -3,7 +3,9 @@ package net.mercuryksm.ui.coordination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import net.mercuryksm.data.*
+import net.mercuryksm.data.ExportSelectionState
+import net.mercuryksm.data.ImportConflictResolutionResult
+import net.mercuryksm.data.SignalItem
 
 /**
  * Coordinates import/export operations and manages related UI state.

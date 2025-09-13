@@ -11,14 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.components.OperationStatus
-import net.mercuryksm.ui.components.OperationStatusHelper
 import net.mercuryksm.ui.components.OperationStatusModal
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
 import java.util.*

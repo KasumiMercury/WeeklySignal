@@ -8,9 +8,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.*
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
 import android.provider.Settings
-import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri

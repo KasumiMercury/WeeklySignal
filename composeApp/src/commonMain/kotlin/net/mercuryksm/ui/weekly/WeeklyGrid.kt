@@ -5,7 +5,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,12 +14,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
-import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotItem
-import net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot
 import net.mercuryksm.ui.WeeklyGridConstants
-import net.mercuryksm.ui.weekly.components.timeslot.generateTimeSlotItems
 import net.mercuryksm.ui.weekly.components.DayCell
 import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotHeader
+import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotItem
+import net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot
+import net.mercuryksm.ui.weekly.components.timeslot.generateTimeSlotItems
 
 @Composable
 fun WeeklyGrid(
