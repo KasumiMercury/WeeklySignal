@@ -2,7 +2,6 @@ package net.mercuryksm.ui.startup
 
 import androidx.compose.runtime.*
 import net.mercuryksm.notification.StartupPermissionDialog
-import net.mercuryksm.notification.PermissionHelper
 import net.mercuryksm.notification.rememberPermissionHelper
 
 @Composable

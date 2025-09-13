@@ -6,13 +6,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioAttributes
-import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.*
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
 import android.provider.Settings
-import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -37,8 +37,6 @@ class AndroidSignalAlarmManager(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
-        private const val CHANNEL_ID_BASE = "weekly_signal_alarms"
-        private const val CHANNEL_NAME = "Weekly Signal Alarms"
         private const val CHANNEL_DESCRIPTION = "Weekly recurring alarms for WeeklySignal reminders"
         private const val ALARM_SOUND_URI = "content://settings/system/notification_sound"
         private val VIBRATION_PATTERN = longArrayOf(0, 300, 200, 300)
@@ -54,6 +52,10 @@ class AndroidSignalAlarmManager(
         // Intent extras
         const val EXTRA_ALARM_INFO = "alarm_info"
         const val EXTRA_IS_REPEATING = "is_repeating"
+        
+        // Two-channel strategy: Vibrate / Silent
+        const val CHANNEL_ID_VIBRATE = "weekly_signal_alarms_vibrate"
+        const val CHANNEL_ID_SILENT = "weekly_signal_alarms_silent"
     }
 
     private var permissionHelper: PermissionHelper? = null
@@ -65,10 +67,8 @@ class AndroidSignalAlarmManager(
     init {
         // Migrate existing SharedPreferences data to Room database on first run
         migrateSharedPreferencesToRoom()
-    }
-
-    init {
-        createNotificationChannel()
+        // Ensure notification channels exist
+        createNotificationChannels()
     }
 
     // Data class for persisting alarm information
@@ -548,28 +548,40 @@ class AndroidSignalAlarmManager(
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
-            val channelId = CHANNEL_ID_BASE // Use fixed channel ID
-            
-            if (notificationManager.getNotificationChannel(channelId) == null) {
-                val channel = NotificationChannel(
-                    channelId,
-                    CHANNEL_NAME,
-                    AndroidNotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = CHANNEL_DESCRIPTION
-                    enableLights(true)
-                    enableVibration(true)
-                    vibrationPattern = VIBRATION_PATTERN
-                    
-                    // No sound for notifications - sound is handled manually
-                    setSound(null, null)
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val mgr = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
+
+        fun ensureChannel(id: String, name: String, importance: Int, enableVibrate: Boolean) {
+            if (mgr.getNotificationChannel(id) != null) return
+            val ch = NotificationChannel(id, name, importance).apply {
+                description = CHANNEL_DESCRIPTION
+                enableLights(true)
+                setSound(null, null) // sound handled manually by Ringtone
+                if (enableVibrate) {
+                    if (Build.VERSION.SDK_INT >= 35) {
+                        try {
+                            val effect = VibrationEffect.createWaveform(VIBRATION_PATTERN, -1)
+                            this.javaClass.getMethod("setVibrationEffect", VibrationEffect::class.java)
+                                .invoke(this, effect)
+                        } catch (_: Throwable) {
+                            enableVibration(true)
+                            vibrationPattern = VIBRATION_PATTERN
+                        }
+                    } else {
+                        enableVibration(true)
+                        vibrationPattern = VIBRATION_PATTERN
+                    }
+                } else {
+                    enableVibration(false)
                 }
-                notificationManager.createNotificationChannel(channel)
             }
+            mgr.createNotificationChannel(ch)
         }
+
+        ensureChannel(CHANNEL_ID_VIBRATE, "Alarms: Vibrate", AndroidNotificationManager.IMPORTANCE_HIGH, true)
+        ensureChannel(CHANNEL_ID_SILENT, "Alarms: Silent", AndroidNotificationManager.IMPORTANCE_DEFAULT, false)
     }
 
 
@@ -585,21 +597,4 @@ class AndroidSignalAlarmManager(
         }
     }
 
-    private fun triggerVibration() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Android 12+: Use VibratorManager for better control
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                val vibrator = vibratorManager.defaultVibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
-            } else {
-                // Android 7-11: Use VibrationEffect with legacy Vibrator
-                @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
-            }
-        } catch (e: Exception) {
-            // Vibration failed, ignore
-        }
-    }
 }
