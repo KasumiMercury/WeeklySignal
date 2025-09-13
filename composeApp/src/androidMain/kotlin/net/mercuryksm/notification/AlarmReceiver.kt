@@ -10,8 +10,6 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.serialization.json.Json
@@ -21,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap
 class AlarmReceiver : BroadcastReceiver() {
     
     companion object {
-        private const val CHANNEL_ID = "weekly_signal_alarms"
+        // Legacy base channel ID kept for migration; new multi-channel IDs live in AndroidSignalAlarmManager
+        private const val LEGACY_CHANNEL_ID = "weekly_signal_alarms"
         private const val NOTIFICATION_ID_BASE = 3000
         private const val DISMISS_ACTION = "DISMISS_ALARM"
         private const val DISMISS_TEST_ALARM_ACTION = "DISMISS_TEST_ALARM"
@@ -38,7 +37,6 @@ class AlarmReceiver : BroadcastReceiver() {
     
     private val json = Json { ignoreUnknownKeys = true }
     
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
         try {
             when (intent.action) {
@@ -57,7 +55,6 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun handleAlarm(context: Context, intent: Intent) {
         val alarmInfoJson = intent.getStringExtra(AndroidSignalAlarmManager.EXTRA_ALARM_INFO) ?: return
         val isRepeating = intent.getBooleanExtra(AndroidSignalAlarmManager.EXTRA_IS_REPEATING, false)
@@ -79,16 +76,21 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun showAlarmNotification(
         context: Context,
         alarmInfo: AndroidSignalAlarmManager.AlarmInfo
     ) {
+        ensureNotificationChannels(context)
         // Generate notification ID
         val notificationId = NOTIFICATION_ID_BASE + alarmInfo.alarmId.hashCode()
-        
-        // Create notification
-        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+
+        val channelId = if (alarmInfo.vibration) {
+            AndroidSignalAlarmManager.CHANNEL_ID_VIBRATE
+        } else {
+            AndroidSignalAlarmManager.CHANNEL_ID_SILENT
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(alarmInfo.title)
             .setContentText(alarmInfo.message)
@@ -97,7 +99,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .setContentIntent(createMainActivityIntent(context))
             .setSound(null) // Always disable notification sound, handle manually
-            .setVibrate(null) // Always disable notification vibration, handle manually
+            .setVibrate(null) // Use channel vibration settings
             .setDeleteIntent(createDeleteIntent(context, alarmInfo.alarmId, notificationId))
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
@@ -114,11 +116,6 @@ class AlarmReceiver : BroadcastReceiver() {
         // Handle sound manually - only if enabled
         if (alarmInfo.sound) {
             playAndManageAlarmSound(context, alarmInfo.alarmId)
-        }
-        
-        // Handle vibration manually - only if enabled
-        if (alarmInfo.vibration) {
-            triggerContinuousVibration(context, alarmInfo.alarmId)
         }
         
         // Set auto-stop timer for 1 minute
@@ -306,48 +303,6 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
     
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun triggerVibration(context: Context) {
-        try {
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Android 12+: Use VibratorManager for better control
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                val vibrator = vibratorManager.defaultVibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
-            } else {
-                // Android 7-11: Use VibrationEffect with legacy Vibrator
-                @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, -1))
-            }
-        } catch (e: Exception) {
-            // Vibration failed, ignore
-        }
-    }
-    
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun triggerContinuousVibration(context: Context, alarmId: String) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Android 12+: Use VibratorManager for better control
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                val vibrator = vibratorManager.defaultVibrator
-                // Continuous vibration: repeat pattern (index 0 = repeat from start)
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, 0))
-                activeVibrators[alarmId] = vibrator
-            } else {
-                // Android 7-11: Use VibrationEffect with legacy Vibrator
-                @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(VIBRATION_PATTERN, 0))
-                activeVibrators[alarmId] = vibrator
-            }
-        } catch (e: Exception) {
-            // Vibration failed, ignore
-        }
-    }
-    
     private fun playAndManageAlarmSound(context: Context, alarmId: String) {
         try {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -413,13 +368,17 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
     
-    // Test alarm unified processing method
-    @RequiresApi(Build.VERSION_CODES.O)
     fun showTestAlarmNotification(context: Context, alarmInfo: AndroidSignalAlarmManager.AlarmInfo) {
+        ensureNotificationChannels(context)
         val notificationId = 1001 // TEST_NOTIFICATION_ID
-        
-        // Create test alarm notification with unified processing
-        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+
+        val channelId = if (alarmInfo.vibration) {
+            AndroidSignalAlarmManager.CHANNEL_ID_VIBRATE
+        } else {
+            AndroidSignalAlarmManager.CHANNEL_ID_SILENT
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(alarmInfo.title)
             .setContentText(alarmInfo.message)
@@ -428,7 +387,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .setContentIntent(createMainActivityIntent(context))
             .setSound(null) // Always disable notification sound, handle manually
-            .setVibrate(null) // Always disable notification vibration, handle manually
+            .setVibrate(null) // Use channel vibration settings
             .setDeleteIntent(createTestAlarmDeleteIntent(context, notificationId))
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
@@ -447,10 +406,44 @@ class AlarmReceiver : BroadcastReceiver() {
             playAndManageAlarmSound(context, "test_alarm")
         }
         
-        // Handle vibration manually - only if enabled
-        if (alarmInfo.vibration) {
-            triggerContinuousVibration(context, "test_alarm")
+    }
+
+    private fun ensureNotificationChannels(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val mgr = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+
+        // Remove legacy single channel if lingering
+        // mgr.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+
+        fun ensureChannel(id: String, name: String, importance: Int, enableVibrate: Boolean) {
+            if (mgr.getNotificationChannel(id) != null) return
+            val ch = android.app.NotificationChannel(id, name, importance).apply {
+                description = "Weekly recurring alarms for WeeklySignal reminders"
+                enableLights(true)
+                setSound(null, null)
+                if (enableVibrate) {
+                    if (Build.VERSION.SDK_INT >= 35) {
+                        try {
+                            val effect = VibrationEffect.createWaveform(VIBRATION_PATTERN, -1)
+                            this.javaClass.getMethod("setVibrationEffect", VibrationEffect::class.java)
+                                .invoke(this, effect)
+                        } catch (_: Throwable) {
+                            enableVibration(true)
+                            vibrationPattern = VIBRATION_PATTERN
+                        }
+                    } else {
+                        enableVibration(true)
+                        vibrationPattern = VIBRATION_PATTERN
+                    }
+                } else {
+                    enableVibration(false)
+                }
+            }
+            mgr.createNotificationChannel(ch)
         }
+
+        ensureChannel(AndroidSignalAlarmManager.CHANNEL_ID_VIBRATE, "Alarms: Vibrate", android.app.NotificationManager.IMPORTANCE_HIGH, true)
+        ensureChannel(AndroidSignalAlarmManager.CHANNEL_ID_SILENT, "Alarms: Silent", android.app.NotificationManager.IMPORTANCE_DEFAULT, false)
     }
     
     private fun cleanupFinishedRingtones() {
