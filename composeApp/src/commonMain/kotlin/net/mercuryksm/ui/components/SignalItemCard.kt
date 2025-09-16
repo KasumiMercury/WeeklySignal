@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,8 +15,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.WeeklyGridConstants
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun SignalItemCard(
@@ -70,6 +74,17 @@ fun SignalItemCard(
     }
 }
 
+@Preview
+@Composable
+private fun SignalItemCardPreview() {
+    MaterialTheme {
+        SignalItemCard(
+            item = signalItemCardPreviewItem(),
+            showTime = true
+        )
+    }
+}
+
 @Composable
 fun EmptyTimeSlot(
     modifier: Modifier = Modifier
@@ -78,5 +93,30 @@ fun EmptyTimeSlot(
         modifier = modifier
             .width(20.dp)
             .height(WeeklyGridConstants.SIGNAL_ITEM_HEIGHT)
+    )
+}
+
+@Preview
+@Composable
+private fun EmptyTimeSlotPreview() {
+    MaterialTheme {
+        EmptyTimeSlot()
+    }
+}
+
+private fun signalItemCardPreviewItem(): SignalItem {
+    return SignalItem(
+        id = "card-preview-1",
+        name = "Morning Routine",
+        description = "Stretch and hydrate",
+        color = 0xFF81C784,
+        timeSlots = listOf(
+            TimeSlot(
+                id = "card-preview-1-mon",
+                hour = 7,
+                minute = 30,
+                dayOfWeek = DayOfWeekJp.MONDAY
+            )
+        )
     )
 }

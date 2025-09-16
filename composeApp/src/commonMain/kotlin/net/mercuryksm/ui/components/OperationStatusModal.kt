@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /**
  * Represents the status of an operation (deletion, alarm cancellation, etc.)
@@ -35,6 +36,57 @@ sealed class OperationStatus {
         val successDetails: List<String> = emptyList(),
         val failureDetails: List<String> = emptyList()
     ) : OperationStatus()
+}
+
+@Preview
+@Composable
+private fun OperationStatusModalLoadingPreview() {
+    MaterialTheme {
+        OperationStatusModal(status = OperationStatus.Loading, onDismiss = {})
+    }
+}
+
+@Preview
+@Composable
+private fun OperationStatusModalSuccessPreview() {
+    MaterialTheme {
+        OperationStatusModal(
+            status = OperationStatus.Success(
+                message = "Successfully removed 2 signals",
+                details = listOf("Morning Routine", "Evening Review")
+            ),
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun OperationStatusModalErrorPreview() {
+    MaterialTheme {
+        OperationStatusModal(
+            status = OperationStatus.Error(
+                message = "Failed to delete signals",
+                details = listOf("Database error", "Alarm cancellation failed")
+            ),
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun OperationStatusModalPartialPreview() {
+    MaterialTheme {
+        OperationStatusModal(
+            status = OperationStatus.PartialSuccess(
+                message = "Some alarms could not be cancelled",
+                successDetails = listOf("Morning Routine"),
+                failureDetails = listOf("Evening Review")
+            ),
+            onDismiss = {}
+        )
+    }
 }
 
 /**

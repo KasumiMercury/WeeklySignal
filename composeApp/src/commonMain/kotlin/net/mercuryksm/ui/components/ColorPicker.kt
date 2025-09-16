@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 object ColorPalette {
     val predefinedColors = listOf(
@@ -33,6 +34,17 @@ object ColorPalette {
         0xFFFFEB3BL, // Yellow
         0xFFF44336L  // Red
     )
+}
+
+@Preview
+@Composable
+private fun ColorPickerPreview() {
+    MaterialTheme {
+        ColorPicker(
+            selectedColor = ColorPalette.predefinedColors.first(),
+            onColorSelected = {}
+        )
+    }
 }
 
 @Composable
@@ -63,6 +75,18 @@ fun ColorPicker(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun ColorItemPreview() {
+    MaterialTheme {
+        ColorItem(
+            color = ColorPalette.predefinedColors.first(),
+            isSelected = true,
+            onClick = {}
+        )
     }
 }
 
