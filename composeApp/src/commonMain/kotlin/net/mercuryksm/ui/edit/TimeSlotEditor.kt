@@ -11,11 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.components.OperationStatus
 import net.mercuryksm.ui.components.OperationStatusModal
 import net.mercuryksm.ui.weekly.WeeklySignalViewModel
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,6 +138,21 @@ fun TimeSlotEditor(
     )
 }
 
+@Preview
+@Composable
+private fun TimeSlotEditorPreview() {
+    MaterialTheme {
+        var timeSlots by remember {
+            mutableStateOf(timeSlotEditorPreviewSlots())
+        }
+
+        TimeSlotEditor(
+            timeSlots = timeSlots,
+            onTimeSlotsChanged = { timeSlots = it }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeSlotRow(
@@ -180,4 +197,33 @@ private fun TimeSlotRow(
             }
         }
     }
+}
+
+@Preview
+@Composable
+private fun TimeSlotRowPreview() {
+    MaterialTheme {
+        TimeSlotRow(
+            timeSlot = timeSlotEditorPreviewSlots().first(),
+            onEdit = {},
+            onDelete = {}
+        )
+    }
+}
+
+private fun timeSlotEditorPreviewSlots(): List<TimeSlot> {
+    return listOf(
+        TimeSlot(
+            id = "editor-preview-1",
+            hour = 9,
+            minute = 0,
+            dayOfWeek = DayOfWeekJp.MONDAY
+        ),
+        TimeSlot(
+            id = "editor-preview-2",
+            hour = 14,
+            minute = 30,
+            dayOfWeek = DayOfWeekJp.WEDNESDAY
+        )
+    )
 }
