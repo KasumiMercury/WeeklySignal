@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.ui.WeeklyGridConstants
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun TimeSlotHeader(
@@ -36,5 +37,21 @@ fun TimeSlotHeader(
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun TimeSlotHeaderPreview() {
+    MaterialTheme {
+        TimeSlotHeader(timeSlot = UITimeSlot(hour = 15, minute = 30, hasItems = true))
+    }
+}
+
+@Preview
+@Composable
+private fun TimeSlotHeaderMemoryMarkPreview() {
+    MaterialTheme {
+        TimeSlotHeader(timeSlot = UITimeSlot(hour = 0, minute = 0, hasItems = false))
     }
 }

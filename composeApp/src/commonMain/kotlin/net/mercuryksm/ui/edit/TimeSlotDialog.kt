@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.TimeSlot
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,6 +178,23 @@ fun TimeSlotDialog(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun TimeSlotDialogPreview() {
+    MaterialTheme {
+        TimeSlotDialog(
+            timeSlot = TimeSlot(
+                id = "dialog-preview",
+                hour = 10,
+                minute = 15,
+                dayOfWeek = DayOfWeekJp.MONDAY
+            ),
+            onConfirm = {},
+            onDismiss = {}
         )
     }
 }

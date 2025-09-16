@@ -22,9 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.ExportSelectionState
+import net.mercuryksm.data.SelectionStateManager
+import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.SignalItemSelectionState
+import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.data.TimeSlotSelectionState
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun SelectableSignalItemList(
@@ -66,6 +71,20 @@ fun SelectableSignalItemList(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun SelectableSignalItemListPreview() {
+    MaterialTheme {
+        SelectableSignalItemList(
+            selectionState = selectableListPreviewState(),
+            onSignalItemSelectionChanged = {},
+            onTimeSlotSelectionChanged = { _, _ -> },
+            onSignalItemExpansionChanged = {},
+            onSelectAllChanged = {}
+        )
     }
 }
 
@@ -114,6 +133,20 @@ private fun SelectAllHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun SelectAllHeaderPreview() {
+    MaterialTheme {
+        SelectAllHeader(
+            isAllSelected = true,
+            hasSelection = true,
+            selectedItemCount = 3,
+            totalItemCount = 3,
+            onSelectAllChanged = {}
+        )
     }
 }
 
@@ -270,6 +303,20 @@ private fun SelectableSignalItemCard(
     }
 }
 
+@Preview
+@Composable
+private fun SelectableSignalItemCardPreview() {
+    MaterialTheme {
+        val sampleSelection = selectableListPreviewState().signalItemSelections.first()
+        SelectableSignalItemCard(
+            selectionState = sampleSelection,
+            onSignalItemSelectionChanged = {},
+            onTimeSlotSelectionChanged = { _, _ -> },
+            onExpansionChanged = {}
+        )
+    }
+}
+
 @Composable
 private fun SelectableTimeSlotItem(
     timeSlotSelection: TimeSlotSelectionState,
@@ -301,6 +348,18 @@ private fun SelectableTimeSlotItem(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun SelectableTimeSlotItemPreview() {
+    MaterialTheme {
+        val timeSlotSelection = selectableListPreviewState().signalItemSelections[1].timeSlotSelections.first()
+        SelectableTimeSlotItem(
+            timeSlotSelection = timeSlotSelection,
+            onSelectionChanged = {}
+        )
     }
 }
 
@@ -351,4 +410,62 @@ fun SelectionSummary(
             }
         }
     }
+}
+
+@Preview
+@Composable
+private fun SelectionSummaryPreview() {
+    MaterialTheme {
+        SelectionSummary(
+            selectionState = selectableListPreviewState()
+        )
+    }
+}
+
+private fun selectableListPreviewState(): ExportSelectionState {
+    val items = listOf(
+        SignalItem(
+            id = "selectable-preview-1",
+            name = "Morning Routine",
+            description = "Stretch and hydrate",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "selectable-preview-1-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "selectable-preview-2",
+            name = "Lunch Walk",
+            description = "Walk outside",
+            color = 0xFF4FC3F7,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "selectable-preview-2-tue",
+                    hour = 12,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.TUESDAY
+                ),
+                TimeSlot(
+                    id = "selectable-preview-2-thu",
+                    hour = 12,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.THURSDAY
+                )
+            )
+        )
+    )
+
+    val initial = SelectionStateManager.createInitialState(items)
+    val firstSelected = SelectionStateManager.toggleSignalItemSelection(initial, items.first().id)
+    val expanded = SelectionStateManager.toggleSignalItemExpansion(firstSelected, items[1].id)
+    return SelectionStateManager.toggleTimeSlotSelection(
+        expanded,
+        items[1].id,
+        items[1].timeSlots.first().id
+    )
 }

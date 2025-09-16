@@ -6,9 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.components.ColorPicker
 import net.mercuryksm.ui.edit.TimeSlotEditor
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +67,27 @@ fun SignalRegistrationForm(
     }
 }
 
+@Preview
+@Composable
+private fun SignalRegistrationFormPreview() {
+    MaterialTheme {
+        SignalRegistrationForm(
+            name = "Morning Routine",
+            onNameChange = {},
+            timeSlots = registrationFormPreviewTimeSlots(),
+            onTimeSlotsChange = {},
+            description = "Start the day with intent",
+            onDescriptionChange = {},
+            sound = true,
+            onSoundChange = {},
+            vibration = true,
+            onVibrationChange = {},
+            color = 0xFF81C784,
+            onColorChange = {}
+        )
+    }
+}
+
 
 @Composable
 private fun NotificationOptions(
@@ -114,4 +137,34 @@ private fun NotificationOptions(
             }
         }
     }
+}
+
+@Preview
+@Composable
+private fun NotificationOptionsPreview() {
+    MaterialTheme {
+        NotificationOptions(
+            sound = true,
+            onSoundChange = {},
+            vibration = false,
+            onVibrationChange = {}
+        )
+    }
+}
+
+private fun registrationFormPreviewTimeSlots(): List<TimeSlot> {
+    return listOf(
+        TimeSlot(
+            id = "registration-form-1",
+            hour = 7,
+            minute = 30,
+            dayOfWeek = DayOfWeekJp.MONDAY
+        ),
+        TimeSlot(
+            id = "registration-form-2",
+            hour = 20,
+            minute = 0,
+            dayOfWeek = DayOfWeekJp.FRIDAY
+        )
+    )
 }

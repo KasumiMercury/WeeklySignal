@@ -14,12 +14,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
+import net.mercuryksm.data.TimeSlot
 import net.mercuryksm.ui.WeeklyGridConstants
 import net.mercuryksm.ui.weekly.components.DayCell
 import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotHeader
 import net.mercuryksm.ui.weekly.components.timeslot.TimeSlotItem
 import net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot
 import net.mercuryksm.ui.weekly.components.timeslot.generateTimeSlotItems
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun WeeklyGrid(
@@ -47,6 +49,17 @@ fun WeeklyGrid(
     }
 }
 
+@Preview
+@Composable
+private fun WeeklyGridPreview() {
+    MaterialTheme {
+        WeeklyGrid(
+            items = weeklyGridPreviewItems(),
+            onItemClick = {}
+        )
+    }
+}
+
 @Composable
 private fun ScrollableTimeSlots(
     timeSlotItems: List<TimeSlotItem>,
@@ -67,7 +80,7 @@ private fun ScrollableTimeSlots(
                         timeSlotItem = timeSlotItem,
                         items = items,
                         onItemClick = onItemClick,
-                        modifier = Modifier.Companion.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+                        modifier = Modifier.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
                     )
                 }
                 is TimeSlotItem.Spacer -> {
@@ -78,6 +91,20 @@ private fun ScrollableTimeSlots(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun TimeSlotWithHeaderPreview() {
+    MaterialTheme {
+        TimeSlotWithHeader(
+            timeSlotItem = TimeSlotItem.TimeSlot(
+                UITimeSlot(hour = 9, minute = 0, hasItems = true)
+            ),
+            items = weeklyGridPreviewItems(),
+            onItemClick = {}
+        )
     }
 }
 
@@ -103,6 +130,16 @@ private fun TimeSlotWithHeader(
             allItems = items,
             onItemClick = onItemClick,
             modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun TimeSlotSpacerPreview() {
+    MaterialTheme {
+        TimeSlotSpacer(
+            timeSlotItem = TimeSlotItem.Spacer(width = 48, startTime = 9 * 60)
         )
     }
 }
@@ -154,12 +191,71 @@ private fun TimeSlotSpacer(
         
         // Empty spacer for content area
         Spacer(
-            modifier = Modifier.Companion.height(
+            modifier = Modifier.height(
                 WeeklyGridConstants.CELL_TOTAL_HEIGHT * 7 +
                 (0.5.dp * 7) // Account for dividers
             )
         )
     }
+}
+
+@Preview
+@Composable
+private fun TimeSlotColumnPreview() {
+    val sampleSlot = UITimeSlot(hour = 12, minute = 0, hasItems = true)
+    MaterialTheme {
+        TimeSlotColumn(
+            timeSlot = sampleSlot,
+            allItems = weeklyGridPreviewItems(),
+            onItemClick = {},
+            modifier = Modifier.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+        )
+    }
+}
+
+private fun weeklyGridPreviewItems(): List<SignalItem> {
+    return listOf(
+        SignalItem(
+            id = "grid-preview-1",
+            name = "Morning",
+            description = "Start the day",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "grid-preview-1-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                ),
+                TimeSlot(
+                    id = "grid-preview-1-wed",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.WEDNESDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "grid-preview-2",
+            name = "Lunch",
+            description = "Walk outside",
+            color = 0xFF4FC3F7,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "grid-preview-2-tue",
+                    hour = 12,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.TUESDAY
+                ),
+                TimeSlot(
+                    id = "grid-preview-2-thu",
+                    hour = 12,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.THURSDAY
+                )
+            )
+        )
+    )
 }
 
 @Composable

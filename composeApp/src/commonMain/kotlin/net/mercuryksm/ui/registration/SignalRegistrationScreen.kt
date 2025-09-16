@@ -12,8 +12,15 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.data.TimeSlot
-import net.mercuryksm.notification.*
+import net.mercuryksm.notification.AlarmOperationResult
+import net.mercuryksm.notification.AlarmResult
+import net.mercuryksm.notification.AlarmSettings
+import net.mercuryksm.notification.NotificationPermissionDialog
+import net.mercuryksm.notification.SignalAlarmManager
+import net.mercuryksm.notification.createTestAlarmSettings
+import net.mercuryksm.notification.rememberPermissionHelper
 import java.util.*
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,7 +146,7 @@ fun SignalRegistrationScreen(
         
         // First, request notification permission if needed
         if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
-            permissionHelper.requestNotificationPermission { notificationGranted ->
+            permissionHelper.requestNotificationPermission { notificationGranted: Boolean ->
                 if (notificationGranted) {
                     // Notification permission granted, now request alarm permission
                     coroutineScope.launch {
@@ -197,7 +204,7 @@ fun SignalRegistrationScreen(
         
         // First, request notification permission if needed
         if (permissionHelper != null && !permissionHelper.hasNotificationPermission()) {
-            permissionHelper.requestNotificationPermission { notificationGranted ->
+            permissionHelper.requestNotificationPermission { notificationGranted: Boolean ->
                 if (notificationGranted) {
                     // Notification permission granted, now request alarm permission
                     coroutineScope.launch {
@@ -382,4 +389,68 @@ fun SignalRegistrationScreen(
             }
         )
     }
+}
+
+@Preview
+@Composable
+private fun SignalRegistrationScreenPreview() {
+    MaterialTheme {
+        SignalRegistrationScreen(
+            onSignalSaved = { _, callback -> callback(Result.success(Unit)) },
+            onBackPressed = {},
+            alarmManager = SignalRegistrationPreviewAlarmManager()
+        )
+    }
+}
+
+private class SignalRegistrationPreviewAlarmManager : SignalAlarmManager {
+    override suspend fun scheduleAlarm(timeSlot: TimeSlot, settings: AlarmSettings) = AlarmOperationResult(
+        timeSlotId = timeSlot.id,
+        pendingIntentRequestCode = -1,
+        nextAlarmTime = -1,
+        result = AlarmResult.NOT_SUPPORTED
+    )
+
+    override suspend fun cancelAlarm(alarmId: String): AlarmResult = AlarmResult.NOT_SUPPORTED
+
+    override suspend fun cancelAllAlarms(): AlarmResult = AlarmResult.NOT_SUPPORTED
+
+    override suspend fun getScheduledAlarms(): List<String> = emptyList()
+
+    override suspend fun showTestAlarm(settings: AlarmSettings): AlarmResult = AlarmResult.NOT_SUPPORTED
+
+    override suspend fun hasAlarmPermission(): Boolean = true
+
+    override suspend fun requestAlarmPermission(): Boolean = true
+
+    override fun isAlarmSupported(): Boolean = false
+
+    override suspend fun scheduleSignalItemAlarms(signalItem: SignalItem): List<AlarmOperationResult> {
+        return signalItem.timeSlots.map { timeSlot ->
+            AlarmOperationResult(
+                timeSlotId = timeSlot.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        }
+    }
+
+    override suspend fun cancelSignalItemAlarms(signalItem: SignalItem) = signalItem.timeSlots.map { AlarmResult.NOT_SUPPORTED }
+
+    override suspend fun updateSignalItemAlarms(
+        oldSignalItem: SignalItem,
+        newSignalItem: SignalItem
+    ): List<AlarmOperationResult> {
+        return newSignalItem.timeSlots.map { timeSlot ->
+            AlarmOperationResult(
+                timeSlotId = timeSlot.id,
+                pendingIntentRequestCode = -1,
+                nextAlarmTime = -1,
+                result = AlarmResult.NOT_SUPPORTED
+            )
+        }
+    }
+
+    override suspend fun isSignalItemAlarmsEnabled(signalItemId: String): Boolean = false
 }
