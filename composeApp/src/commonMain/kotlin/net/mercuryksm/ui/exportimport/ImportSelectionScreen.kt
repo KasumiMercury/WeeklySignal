@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.mercuryksm.data.*
 import net.mercuryksm.ui.usecase.ImportSelectionUseCase
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -290,4 +291,91 @@ fun ImportSelectionScreen(
             }
         )
     }
+}
+
+@Preview
+@Composable
+private fun ImportSelectionScreenPreview() {
+    MaterialTheme {
+        val imported = remember { importSelectionPreviewImported() }
+        val existing = remember { importSelectionPreviewExisting() }
+        ImportSelectionScreen(
+            importedItems = imported,
+            existingItems = existing,
+            onBackPressed = {},
+            onImportSelected = {}
+        )
+    }
+}
+
+private fun importSelectionPreviewImported(): List<SignalItem> {
+    return listOf(
+        SignalItem(
+            id = "import-preview-1",
+            name = "Morning Routine",
+            description = "Stretch and hydrate",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "import-preview-1-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "import-preview-2",
+            name = "Lunch Walk",
+            description = "Walk outside",
+            color = 0xFF4FC3F7,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "import-preview-2-tue",
+                    hour = 12,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.TUESDAY
+                ),
+                TimeSlot(
+                    id = "import-preview-2-thu",
+                    hour = 12,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.THURSDAY
+                )
+            )
+        )
+    )
+}
+
+private fun importSelectionPreviewExisting(): List<SignalItem> {
+    return listOf(
+        SignalItem(
+            id = "import-preview-1",
+            name = "Morning Routine",
+            description = "Existing version",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "import-preview-existing-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "import-preview-3",
+            name = "Evening Review",
+            description = "Plan tomorrow",
+            color = 0xFFFFB74D,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "import-preview-3-fri",
+                    hour = 20,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.FRIDAY
+                )
+            )
+        )
+    )
 }
