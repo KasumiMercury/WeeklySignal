@@ -80,7 +80,7 @@ private fun ScrollableTimeSlots(
                         timeSlotItem = timeSlotItem,
                         items = items,
                         onItemClick = onItemClick,
-                        modifier = Modifier.Companion.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
+                        modifier = Modifier.width(WeeklyGridConstants.SIGNAL_ITEM_WIDTH)
                     )
                 }
                 is TimeSlotItem.Spacer -> {
@@ -191,7 +191,7 @@ private fun TimeSlotSpacer(
         
         // Empty spacer for content area
         Spacer(
-            modifier = Modifier.Companion.height(
+            modifier = Modifier.height(
                 WeeklyGridConstants.CELL_TOTAL_HEIGHT * 7 +
                 (0.5.dp * 7) // Account for dividers
             )
