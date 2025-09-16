@@ -22,6 +22,8 @@ import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.ui.WeeklyGridConstants
 import net.mercuryksm.ui.components.SignalItemCard
+import net.mercuryksm.data.TimeSlot
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun SignalItemsModal(
@@ -104,4 +106,50 @@ fun SignalItemsModal(
             }
         }
     }
+}
+
+@Preview
+@Composable
+private fun SignalItemsModalPreview() {
+    MaterialTheme {
+        SignalItemsModal(
+            items = signalItemsModalPreviewItems(),
+            dayOfWeek = DayOfWeekJp.MONDAY,
+            onItemClick = {},
+            onDismiss = {}
+        )
+    }
+}
+
+private fun signalItemsModalPreviewItems(): List<SignalItem> {
+    return listOf(
+        SignalItem(
+            id = "modal-preview-1",
+            name = "Morning Routine",
+            description = "Stretch and hydrate",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "modal-preview-1-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "modal-preview-2",
+            name = "Evening Review",
+            description = "Plan tomorrow",
+            color = 0xFFFFB74D,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "modal-preview-2-mon",
+                    hour = 20,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        )
+    )
 }

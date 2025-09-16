@@ -1,10 +1,12 @@
 package net.mercuryksm.notification
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun StartupPermissionDialog(
@@ -37,6 +39,18 @@ fun StartupPermissionDialog(
                     Text("Skip for Now")
                 }
             }
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun StartupPermissionDialogPreview() {
+    MaterialTheme {
+        StartupPermissionDialog(
+            showDialog = true,
+            onDismiss = {},
+            onRequestPermission = {}
         )
     }
 }

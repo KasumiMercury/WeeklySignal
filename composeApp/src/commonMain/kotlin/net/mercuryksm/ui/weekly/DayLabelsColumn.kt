@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.ui.WeeklyGridConstants
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun DayLabelsColumn(
@@ -49,5 +50,13 @@ fun DayLabelsColumn(
                 thickness = 0.5.dp
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun DayLabelsColumnPreview() {
+    MaterialTheme {
+        DayLabelsColumn()
     }
 }

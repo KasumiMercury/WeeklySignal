@@ -18,6 +18,9 @@ import net.mercuryksm.data.DayOfWeekJp
 import net.mercuryksm.data.SignalItem
 import net.mercuryksm.ui.WeeklyGridConstants
 import net.mercuryksm.ui.components.SignalItemCard
+import net.mercuryksm.ui.weekly.components.timeslot.UITimeSlot
+import net.mercuryksm.data.TimeSlot
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun DayCell(
@@ -63,6 +66,101 @@ fun DayCell(
         // Bottom spacing
         Spacer(modifier = Modifier.Companion.height(WeeklyGridConstants.CELL_SPACING))
     }
+}
+
+@Preview
+@Composable
+private fun DayCellEmptyPreview() {
+    MaterialTheme {
+        DayCell(
+            dayOfWeek = DayOfWeekJp.MONDAY,
+            items = emptyList(),
+            onItemClick = {},
+            timeSlot = UITimeSlot(hour = 9, minute = 0, hasItems = false),
+            modifier = Modifier
+                .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+                .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun DayCellSingleItemPreview() {
+    MaterialTheme {
+        DayCell(
+            dayOfWeek = DayOfWeekJp.MONDAY,
+            items = dayCellPreviewItems().take(1),
+            onItemClick = {},
+            timeSlot = UITimeSlot(hour = 7, minute = 30, hasItems = true),
+            modifier = Modifier
+                .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+                .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun DayCellMultipleItemsPreview() {
+    MaterialTheme {
+        DayCell(
+            dayOfWeek = DayOfWeekJp.THURSDAY,
+            items = dayCellPreviewItems(),
+            onItemClick = {},
+            timeSlot = UITimeSlot(hour = 12, minute = 0, hasItems = true),
+            modifier = Modifier
+                .width(WeeklyGridConstants.DAY_LABEL_WIDTH)
+                .height(WeeklyGridConstants.CELL_TOTAL_HEIGHT)
+        )
+    }
+}
+
+private fun dayCellPreviewItems(): List<SignalItem> {
+    return listOf(
+        SignalItem(
+            id = "daycell-preview-1",
+            name = "Morning",
+            description = "Stretch and hydrate",
+            color = 0xFF81C784,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "daycell-preview-1-mon",
+                    hour = 7,
+                    minute = 30,
+                    dayOfWeek = DayOfWeekJp.MONDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "daycell-preview-2",
+            name = "Lunch",
+            description = "Go for a walk",
+            color = 0xFF4FC3F7,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "daycell-preview-2-thu",
+                    hour = 12,
+                    minute = 0,
+                    dayOfWeek = DayOfWeekJp.THURSDAY
+                )
+            )
+        ),
+        SignalItem(
+            id = "daycell-preview-3",
+            name = "Evening",
+            description = "Review the day",
+            color = 0xFFFFB74D,
+            timeSlots = listOf(
+                TimeSlot(
+                    id = "daycell-preview-3-thu",
+                    hour = 19,
+                    minute = 45,
+                    dayOfWeek = DayOfWeekJp.THURSDAY
+                )
+            )
+        )
+    )
 }
 
 @Composable
